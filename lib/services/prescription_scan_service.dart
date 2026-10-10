@@ -204,7 +204,7 @@ class PrescriptionScanService {
   // ============================================================
   // 儲存用藥到 Firestore
   // ============================================================
-  Future<void> saveMedications(List<medicine> medications) async {
+  Future<List<medicine>> saveMedications(List<medicine> medications) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw Exception('用戶未登入');
@@ -216,13 +216,16 @@ class PrescriptionScanService {
         .doc(user.uid)
         .collection('medicine');
 
+    final saved = <medicine>[];
     for (final med in medications) {
       final docRef = medicineCollection.doc();
       batch.set(docRef, med.toFirestore());
+      saved.add(med.copyWith(medicine_id: docRef.id));
     }
 
     await batch.commit();
     debugPrint('已儲存 ${medications.length} 種藥品');
+    return saved;
   }
 
   // ============================================================

@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import '../models/medication_model.dart';
 
 class FirestoreService {
-
-  FirestoreService({FirebaseFirestore? firestore, String? Function()? currentUid})
-    : _firestore = firestore ?? FirebaseFirestore.instance,
-      _uidProvider = currentUid ?? (() => FirebaseAuth.instance.currentUser?.uid);
+  FirestoreService({
+    FirebaseFirestore? firestore,
+    String? Function()? currentUid,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _uidProvider =
+           currentUid ?? (() => FirebaseAuth.instance.currentUser?.uid);
   final FirebaseFirestore _firestore;
   final String? Function() _uidProvider;
 
@@ -21,37 +23,40 @@ class FirestoreService {
   CollectionReference _getRawMedicationsCollection() {
     final uid = _currentUid;
     if (uid == null) {
-      debugPrint('AUTH ERROR: _getRawMedicationsCollection failed. User is not logged in.');
-      throw Exception('AuthError: User not logged in. Cannot access medication collection.');
+      debugPrint(
+        'AUTH ERROR: _getRawMedicationsCollection failed. User is not logged in.',
+      );
+      throw Exception(
+        'AuthError: User not logged in. Cannot access medication collection.',
+      );
     }
 
     // 構造路徑: users/{uid}/medicine
-    return _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('medicine');
+    return _firestore.collection('users').doc(uid).collection('medicine');
   }
 
   // ⭐ 關鍵修正：獲取 Medication Logs 集合路徑: users/{uid}/medication_logs
   CollectionReference _getMedicationLogsCollection() {
-      final uid = _currentUid;
-      if (uid == null) {
-        debugPrint('AUTH ERROR: _getMedicationLogsCollection failed. User is not logged in.');
-        throw Exception('AuthError: User not logged in. Cannot access medication log collection.');
-      }
-      return _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('medication_logs');
+    final uid = _currentUid;
+    if (uid == null) {
+      debugPrint(
+        'AUTH ERROR: _getMedicationLogsCollection failed. User is not logged in.',
+      );
+      throw Exception(
+        'AuthError: User not logged in. Cannot access medication log collection.',
+      );
+    }
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('medication_logs');
   }
-
 
   // 2. 輔助函式：用於 Model 讀取 (例如：StreamBuilder) 和本次交易讀取
   // 返回帶有 medicine 轉換器的 CollectionReference
   CollectionReference<medicine> getMedicationsCollectionWithConverter() {
     // 使用原始 CollectionReference, 然後添加轉換器
-    return _getRawMedicationsCollection()
-        .withConverter<medicine>(
+    return _getRawMedicationsCollection().withConverter<medicine>(
       fromFirestore: (snapshot, _) => medicine.fromFirestore(snapshot),
       toFirestore: (med, _) => med.toFirestore(),
     );
@@ -66,164 +71,191 @@ class FirestoreService {
     required medicine medication,
     required int timeSlotIndex,
   }) async {
-    if (_currentUid == null) {
-      // 交易失敗，因為用戶未登入
-      throw Exception('AuthError: Cannot toggle intake, user not authenticated.');
+    final uid = _currentUid;
+    final id = medication.medicine_id;
+    if (uid == null || id == null) throw StateError('請登入並重新載入藥品。');
+    if (timeSlotIndex < 0 ||
+        timeSlotIndex >= medication.times_status.length ||
+        timeSlotIndex >= medication.times_of_day_list.length)
+      throw StateError('服藥時段不存在。');
+    final taking =
+        medication.shouldResetStatus || !medication.times_status[timeSlotIndex];
+    final owner = _firestore.collection('users').doc(uid);
+    final ref = owner.collection('medicine').doc(id);
+    await _firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(ref);
+      if (_currentUid != uid || !snapshot.exists) throw StateError('帳號或藥品已變更。');
+      final current = medicine.fromFirestore(snapshot);
+      final times = current.times_of_day_list;
+      if (times.map((t) => '${t.hour}:${t.minute}').toSet().length != times.length) throw StateError('提醒時段不可重複，請先編輯藥品。');
+      if (timeSlotIndex >= times.length ||
+          timeSlotIndex >= current.times_status.length ||
+          times[timeSlotIndex].hour !=
+              medication.times_of_day_list[timeSlotIndex].hour ||
+          times[timeSlotIndex].minute !=
+              medication.times_of_day_list[timeSlotIndex].minute) {
+        throw StateError('服藥時段已變更，請重新載入。');
+      }
+      final status = current.shouldResetStatus
+          ? List<bool>.filled(times.length, false)
+          : List<bool>.from(current.times_status);
+      if (status[timeSlotIndex] == taking) throw StateError('用藥狀態已更新，請重新載入。');
+      final stock = current.total_supply.toDouble();
+      final dose = current.total_pills.toDouble();
+      if (!stock.isFinite || stock < 0 || !dose.isFinite || dose <= 0)
+        throw StateError('劑量或庫存無效。');
+      final now = DateTime.now();
+      final day = '${now.year}-${now.month}-${now.day}';
+      final slot =
+          '${times[timeSlotIndex].hour}:${times[timeSlotIndex].minute}';
+      final receipts = Map<String, dynamic>.from(
+        snapshot.data()?['intake_receipts'] ?? {},
+      );
+      double deducted;
+      double loggedDose = dose;
+      if (taking) {
+        deducted = stock < dose ? stock : dose;
+        receipts[slot] = {'day': day, 'deducted': deducted, 'dosage': dose};
+      } else {
+        final receipt = receipts[slot];
+        if (receipt is! Map ||
+            receipt['day'] != day ||
+            receipt['deducted'] is! num ||
+            receipt['dosage'] is! num) {
+          throw StateError('舊服藥紀錄缺少庫存扣除明細，無法安全取消；請先核對紀錄與庫存。');
+        }
+        deducted = (receipt['deducted'] as num).toDouble();
+        loggedDose = (receipt['dosage'] as num).toDouble();
+        if (!deducted.isFinite ||
+            deducted < 0 ||
+            !loggedDose.isFinite ||
+            loggedDose <= 0)
+          throw StateError('扣除明細無效。');
+        receipts.remove(slot);
+      }
+      final remaining = taking ? stock - deducted : stock + deducted;
+      status[timeSlotIndex] = taking;
+      tx.update(ref, {
+        'times_status': status,
+        'total_supply': remaining,
+        'lastUpdated': Timestamp.fromDate(now),
+        'intake_receipts': receipts,
+      });
+      tx.set(owner.collection('medication_logs').doc(), {
+        'medicine_id': id,
+        'medicine_name': current.name,
+        'intake_time': Timestamp.fromDate(now),
+        'dosage_taken': loggedDose,
+        'stock_change': taking ? -deducted : deducted,
+        'dose_number': timeSlotIndex + 1,
+        'user_id': uid,
+        'is_taken': taking,
+        'status': taking ? 'taken' : 'cancelled',
+        'route': current.route,
+        'frequency': current.frequency,
+        'remaining_days': _calculateRemainingDays(
+          totalSupply: remaining,
+          totalPills: dose,
+          frequency: current.frequency,
+        ),
+        'created_at': FieldValue.serverTimestamp(),
+      });
+    });
+    return taking;
+  }
+
+  /// Merge only fields edited by this form; preserve live stock and intake receipts.
+  Future<medicine> editMedication(medicine original, medicine edited) async {
+    final uid = _currentUid;
+    if (uid == null || original.medicine_id == null) throw StateError('請重新登入。');
+    final before = original.toFirestore(), after = edited.toFirestore();
+    const fields = [
+      'name',
+      'dosage',
+      'unit',
+      'total_pills',
+      'frequency',
+      'times_of_day_list',
+      'instruction',
+      'route',
+      'duration_days',
+      'start_date',
+      'reminderEnabled',
+      'source',
+      'clinicalUse',
+      'sideEffects',
+      'precautions',
+      'storageMethod',
+      'appearance',
+    ];
+    bool equal(Object? a, Object? b) {
+      if (a is List && b is List)
+        return a.length == b.length &&
+            List.generate(a.length, (i) => a[i] == b[i]).every((v) => v);
+      return a == b;
     }
 
-    if (medication.medicine_id == null) {
-      throw Exception('ValidationError: Medication ID is missing.');
-    }
-
-    // 1. 使用帶有轉換器的 DocumentReference<medicine> 來讀取
-    final medicineRefWithConverter = getMedicationsCollectionWithConverter().doc(medication.medicine_id!);
-
-    // 2. 使用原始的 DocumentReference 來更新 (因為 update 接受 Map)
-    final medicineRef = _getRawMedicationsCollection().doc(medication.medicine_id!);
-
-    // ⭐ 修正 2: 使用用戶專屬的日誌集合
-    final logCollection = _getMedicationLogsCollection();
-
-    // isLogging 為 true 表示要執行記錄（將狀態從 false 切換為 true）
-    final isLogging = medication.shouldResetStatus || !medication.times_status[timeSlotIndex];
-
-    double? newRemainingPills;
-
-    try {
-        debugPrint('Service: Starting transaction for ${medication.name}, slot $timeSlotIndex. Logging: $isLogging');
-
-        // --- 執行 Firestore 交易 ---
-        await _firestore.runTransaction((transaction) async {
-          try {
-            debugPrint('Transaction: Attempting to get document: ${medicineRefWithConverter.path}');
-
-            // 修正 2: 獲取文檔快照 (類型為 DocumentSnapshot<medicine>)
-            final snapshot = await transaction.get(medicineRefWithConverter);
-
-            if (!snapshot.exists) {
-              throw Exception("FirestoreError: Medication document does not exist at path: ${medicineRefWithConverter.path}");
-            }
-
-            // ⭐ 修正 3 (關鍵 V2): 隔離並強制將 model 轉換為 Map，解決 Web DDC 錯誤
-            final medicineInstance = snapshot.data(); // 這裡返回的是 medicine?
-
-            if (medicineInstance == null) {
-                throw Exception("DataError: Medication snapshot data is null (medicine instance missing).");
-            }
-
-            // 這是強制 Dart Development Compiler (DDC) 正確執行 toFirestore() 的關鍵步驟
-            // 顯式宣告 model 類型，並調用 toFirestore() 取得 Map
-            final medicine dataModel = medicineInstance;
-            final data = dataModel.toFirestore();
-
-            // 1. 讀取單次劑量 (total_pills)
-            // 從安全的 Map 讀取
-            final dosage = (data['total_pills'] as num? ?? 1).toDouble();
-            if (!dosage.isFinite || dosage <= 0) throw const FormatException('請確認單次劑量。');
-
-            // 2. 讀取狀態列表
-            final firestoreStatus = dataModel.shouldResetStatus
-                ? List<bool>.filled(dataModel.times_status.length, false)
-                : List<bool>.from(data['times_status'] ?? []);
-            if (timeSlotIndex < 0 || timeSlotIndex >= firestoreStatus.length) {
-              throw Exception('ValidationError: Invalid medication time slot.');
-            }
-
-            // 3. 讀取現有庫存 (total_supply)，並使用容錯處理
-            double currentRemainingPills = 0.0;
-            final rawRemainingPills = data['total_supply'];
-
-            if (rawRemainingPills is num) {
-                currentRemainingPills = rawRemainingPills.toDouble();
-            } else if (rawRemainingPills is String) {
-                currentRemainingPills = double.tryParse(rawRemainingPills) ?? 0.0;
-            }
-
-            debugPrint('Transaction: Dosage per time (total_pills): $dosage');
-            debugPrint('Transaction: Current remaining pills (total_supply): $currentRemainingPills');
-
-
-            // 4. 檢查狀態是否已被其他操作改變 (Race Condition Check)
-            if (firestoreStatus[timeSlotIndex] == isLogging) {
-              throw Exception("ConcurrencyError: 狀態不符，用藥狀態已被更新，請重新整理後再試。");
-            }
-
-            // 5. 執行狀態和庫存調整
-            firestoreStatus[timeSlotIndex] = isLogging;
-
-            double pillsToChange = isLogging ? -dosage : dosage;
-            newRemainingPills = currentRemainingPills + pillsToChange;
-
-            if (newRemainingPills! < 0) {
-              debugPrint('Warning: Remaining pills will be negative. Capping at 0.');
-            }
-
-            // ⭐ 關鍵修正：無論是服用還是取消，都在交易中記錄日誌
-            // 計算更新後的剩餘天數
-            final updatedRemainingDays = _calculateRemainingDays(
-              totalSupply: newRemainingPills! > 0 ? newRemainingPills! : 0,
-              totalPills: dosage,
-              frequency: medication.frequency,
-            );
-
-            final logData = {
-              'medicine_id': medication.medicine_id,
-              'medicine_name': medication.name,
-              'intake_time': Timestamp.now(),
-              'dosage_taken': dosage,
-              'dose_number': timeSlotIndex + 1, // 使用一致的欄位名稱
-              'user_id': _currentUid,
-              'is_taken': isLogging, // true = 服用, false = 取消
-              'status': isLogging ? 'taken' : 'cancelled', // 明確的狀態文字
-              'route': medication.route,
-              'frequency': medication.frequency,
-              'remaining_days': updatedRemainingDays, // 新增：記錄當時的剩餘天數
-              'created_at': FieldValue.serverTimestamp(),
-            };
-
-            // 新增日誌記錄（服用和取消都會記錄）
-            transaction.set(logCollection.doc(), logData);
-            debugPrint('Transaction: Writing log for ${isLogging ? "intake" : "cancellation"}.');
-
-            // 6. 提交狀態和庫存的更新 (使用未轉換的 Ref 進行更新)
-            transaction.update(medicineRef, {
-              'times_status': firestoreStatus,
-              'lastUpdated': Timestamp.now(),
-              'total_supply': newRemainingPills! > 0 ? newRemainingPills : 0,
-            });
-            debugPrint('Transaction: Document updated successfully.');
-          } catch (e, stackTrace) {
-             debugPrint('!!! TRANSACTION CRITICAL ERROR INSIDE TRANSACTION BLOCK (Potential Security Rule or Data Type Error)!!!');
-             debugPrint('Error: $e');
-             debugPrint('Stack Trace: $stackTrace');
-             // 必須重新拋出，讓 runTransaction 知道失敗
-             rethrow;
-          }
-        });
-        debugPrint('Service: Transaction completed successfully.');
-
-        return isLogging;
-
-    } catch (e, stackTrace) {
-      debugPrint('!!! SERVICE EXTERNAL CATCH BLOCK TRIGGERED (This error is being sent to UI)!!!');
-      debugPrint('External Error: $e');
-      debugPrint('External Stack Trace: $stackTrace');
-
-      // 重新拋出更易讀的錯誤訊息給 UI 層
-      // 處理 Web/JS 平台錯誤：由於錯誤來自底層 JS 引擎，我們仍然拋出一個自定義 Exception
-      throw Exception('Medication intake toggle failed: ${e.toString()}');
-    }
+    final changes = <String, dynamic>{
+      for (final key in fields)
+        if (!equal(before[key], after[key]))
+          key: after[key] ?? FieldValue.delete(),
+    };
+    final ref = _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('medicine')
+        .doc(original.medicine_id);
+    await _firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(ref);
+      if (_currentUid != uid || !snapshot.exists) throw StateError('帳號或藥品已變更。');
+      final current = medicine.fromFirestore(snapshot);
+      final raw = current.toFirestore();
+      final patch = Map<String, dynamic>.from(changes);
+      for (final key in changes.keys) {
+        if (!equal(raw[key], before[key]) && !equal(raw[key], after[key]))
+          throw StateError('此欄位已在其他裝置修改，請重新載入。');
+      }
+      if (changes.containsKey('times_of_day_list')) {
+        final statuses = current.shouldResetStatus
+            ? List<bool>.filled(current.times_status.length, false)
+            : current.times_status;
+        final next = edited.times_of_day_list;
+        final clocks = next.map((t) => '${t.hour}:${t.minute}').toList();
+        if (clocks.toSet().length != clocks.length)
+          throw StateError('提醒時段不可重複。');
+        for (var i = 0; i < statuses.length; i++) {
+          if (statuses[i] &&
+              !clocks.contains(
+                '${current.times_of_day_list[i].hour}:${current.times_of_day_list[i].minute}',
+              ))
+            throw StateError('已服用時段須先取消紀錄，才能移除或修改時間。');
+        }
+        patch['times_status'] = next.map((t) {
+          final i = current.times_of_day_list.indexWhere(
+            (old) => old.hour == t.hour && old.minute == t.minute,
+          );
+          return i >= 0 && i < statuses.length ? statuses[i] : false;
+        }).toList();
+      }
+      if (patch.isNotEmpty) tx.update(ref, patch);
+    });
+    return medicine.fromFirestore(await ref.get());
   }
 
   /// 計算剩餘天數（根據庫存、單次劑量、頻率）
-  int _calculateRemainingDays({required num totalSupply, required num totalPills, required String frequency}) =>
-      MedicationDose.remainingDays(totalSupply, totalPills, frequency);
+  int _calculateRemainingDays({
+    required num totalSupply,
+    required num totalPills,
+    required String frequency,
+  }) => MedicationDose.remainingDays(totalSupply, totalPills, frequency);
 
   /// 獲取用藥日誌的 Stream
   Stream<QuerySnapshot> getMedicationLogs() {
     // ⭐ 修正 3: 在讀取之前檢查用戶 ID
     if (_currentUid == null) {
-      debugPrint('WARN: User is not authenticated. Medication logs stream is empty.');
+      debugPrint(
+        'WARN: User is not authenticated. Medication logs stream is empty.',
+      );
       return Stream.empty(); // 如果未登入，返回一個空的 Stream
     }
 
@@ -240,19 +272,20 @@ class FirestoreService {
   CollectionReference _getHealthRecordsCollection() {
     final uid = _currentUid;
     if (uid == null) {
-      debugPrint('AUTH ERROR: _getHealthRecordsCollection failed. User is not logged in.');
+      debugPrint(
+        'AUTH ERROR: _getHealthRecordsCollection failed. User is not logged in.',
+      );
       throw Exception('User not logged in');
     }
-    return _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('health_records');
+    return _firestore.collection('users').doc(uid).collection('health_records');
   }
 
   /// 新增健康紀錄
   Future<void> addHealthRecord(Map<String, dynamic> data) async {
     if (_currentUid == null) {
-      throw Exception('AuthError: Cannot add health record, user not authenticated.');
+      throw Exception(
+        'AuthError: Cannot add health record, user not authenticated.',
+      );
     }
     try {
       await _getHealthRecordsCollection().add(data);
@@ -262,9 +295,14 @@ class FirestoreService {
   }
 
   /// 更新健康紀錄
-  Future<void> updateHealthRecord(String recordId, Map<String, dynamic> data) async {
+  Future<void> updateHealthRecord(
+    String recordId,
+    Map<String, dynamic> data,
+  ) async {
     if (_currentUid == null) {
-      throw Exception('AuthError: Cannot update health record, user not authenticated.');
+      throw Exception(
+        'AuthError: Cannot update health record, user not authenticated.',
+      );
     }
     try {
       await _getHealthRecordsCollection().doc(recordId).update(data);
@@ -276,7 +314,9 @@ class FirestoreService {
   /// 刪除健康紀錄
   Future<void> deleteHealthRecord(String recordId) async {
     if (_currentUid == null) {
-      throw Exception('AuthError: Cannot delete health record, user not authenticated.');
+      throw Exception(
+        'AuthError: Cannot delete health record, user not authenticated.',
+      );
     }
     try {
       await _getHealthRecordsCollection().doc(recordId).delete();
@@ -289,15 +329,17 @@ class FirestoreService {
   Stream<QuerySnapshot> getHealthRecords() {
     try {
       if (_currentUid == null) {
-        debugPrint('WARN: User is not authenticated. Health records stream is empty.');
+        debugPrint(
+          'WARN: User is not authenticated. Health records stream is empty.',
+        );
         return Stream.empty();
       }
       return _getHealthRecordsCollection()
           .orderBy('record_time', descending: true)
           .snapshots();
     } catch (e) {
-       // 如果獲取失敗，返回空的 Stream
-       return Stream.empty();
+      // 如果獲取失敗，返回空的 Stream
+      return Stream.empty();
     }
   }
 
@@ -309,29 +351,31 @@ class FirestoreService {
   CollectionReference _getDietRecordsCollection() {
     final uid = _currentUid;
     if (uid == null) {
-      debugPrint('AUTH ERROR: _getDietRecordsCollection failed. User is not logged in.');
-      throw Exception('AuthError: User not logged in. Cannot access diet records collection.');
+      debugPrint(
+        'AUTH ERROR: _getDietRecordsCollection failed. User is not logged in.',
+      );
+      throw Exception(
+        'AuthError: User not logged in. Cannot access diet records collection.',
+      );
     }
-    return _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('diet_records');
+    return _firestore.collection('users').doc(uid).collection('diet_records');
   }
 
   /// 新增飲食紀錄
   Future<void> addDietRecord(Map<String, dynamic> data) async {
     if (_currentUid == null) {
-      throw Exception('AuthError: Cannot add diet record, user not authenticated.');
+      throw Exception(
+        'AuthError: Cannot add diet record, user not authenticated.',
+      );
     }
     try {
       // 確保包含時間戳記
-      final recordData = {
-        ...data,
-        'timestamp': FieldValue.serverTimestamp(),
-      };
+      final recordData = {...data, 'timestamp': FieldValue.serverTimestamp()};
 
       await _getDietRecordsCollection().add(recordData);
-      debugPrint('✅ Diet record added successfully: ${data['foodName'] ?? 'Unknown food'}');
+      debugPrint(
+        '✅ Diet record added successfully: ${data['foodName'] ?? 'Unknown food'}',
+      );
     } catch (e) {
       debugPrint('❌ Failed to add diet record: $e');
       throw Exception('Failed to add diet record: $e');
@@ -342,7 +386,9 @@ class FirestoreService {
   Stream<QuerySnapshot> getDietRecords() {
     try {
       if (_currentUid == null) {
-        debugPrint('WARN: User is not authenticated. Diet records stream is empty.');
+        debugPrint(
+          'WARN: User is not authenticated. Diet records stream is empty.',
+        );
         return Stream.empty();
       }
       return _getDietRecordsCollection()

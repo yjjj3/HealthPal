@@ -1,3 +1,4 @@
+import '../utils/medication_schedule.dart';
 import '../services/medication_day_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -15,8 +16,7 @@ import '../services/notification_service.dart';
 
 // 導入設計系統
 import '../theme/app_colors.dart';
-import '../theme/app_dimensions.dart';
-import '../theme/app_text_styles.dart'; 
+
 
 class MedicationScreen extends StatefulWidget {
   const MedicationScreen({super.key});
@@ -51,6 +51,8 @@ class _MedicationScreenState extends State<MedicationScreen>
   ];
 
   // 新增：追蹤是否已顯示重置通知
+  final _restoredReminderIds = <String>{};
+  final _pendingRestores = <String, Future<void>>{};
   bool _hasShownResetNotification = false;
   DateTime? _lastResetDate;
 
@@ -77,6 +79,11 @@ class _MedicationScreenState extends State<MedicationScreen>
         _observedMedications
           ..clear()
           ..addEntries(snapshot.docs.map((doc) => MapEntry(doc.id, doc.data())));
+        for (final doc in snapshot.docs) {
+          if (!doc.data().shouldResetStatus && _restoredReminderIds.add(doc.id)) {
+            _pendingRestores[doc.id] = _restoreMedicationReminders(doc.id, doc.data());
+          }
+        }
         _refreshMedicationDay();
       }, onError: (Object error) {
         debugPrint('用藥重置監聽失敗: $error');
@@ -97,6 +104,14 @@ class _MedicationScreenState extends State<MedicationScreen>
     if (state == AppLifecycleState.resumed) _refreshMedicationDay();
   }
 
+  Future<void> _restoreMedicationReminders(String id, medicine med) async {
+    try {
+      await NotificationService().cancelMedicationReminders(id, legacyName: med.name);
+      if (!mounted) return;
+      await _scheduleMedicationReminders(id, med);
+    } catch (error) { debugPrint('通知恢復失敗: $error'); _restoredReminderIds.remove(id); }
+  }
+
   void _refreshMedicationDay() {
     if (!mounted) return;
     for (final entry in _observedMedications.entries) {
@@ -111,6 +126,11 @@ class _MedicationScreenState extends State<MedicationScreen>
       if (uid == null) return;
       final reset = await MedicationDayService(_firestore).resetIfNeeded(uid, id);
       if (reset == null || !mounted) return;
+      await _pendingRestores[id];
+      if (!mounted) return;
+      await NotificationService().cancelMedicationReminders(id, legacyName: reset.name);
+      if (!mounted) return;
+      _restoredReminderIds.add(id);
       await _scheduleMedicationReminders(id, reset);
       if (!mounted || _hasShownResetNotification) return;
       _hasShownResetNotification = true;
@@ -144,6 +164,8 @@ class _MedicationScreenState extends State<MedicationScreen>
       final docRef = await _medicationsCollection.add(medicationWithStatus);
 
       // 排程用藥提醒通知
+      await _pendingRestores[docRef.id];
+      if (!mounted) return;
       await _scheduleMedicationReminders(docRef.id, medicationWithStatus);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -158,18 +180,13 @@ class _MedicationScreenState extends State<MedicationScreen>
 
   // 排程用藥提醒通知
   Future<void> _scheduleMedicationReminders(String medicineId, medicine med) async {
+    final uid = _auth.currentUser?.uid;
+    if (!mounted || uid == null) return;
     final notificationService = NotificationService();
 
     // 如果該藥物已關閉提醒，取消所有通知並返回
     if (!med.reminderEnabled) {
-      for (int i = 0; i < med.times_of_day_list.length; i++) {
-        final notificationId = medicineId.hashCode + i;
-        await notificationService.cancelNotification(notificationId);
-        // 取消漏吃提醒
-        for (int j = 1; j <= 3; j++) {
-          await notificationService.cancelNotification(notificationId + 1000 + j);
-        }
-      }
+      await notificationService.cancelMedicationReminders(medicineId, legacyName: med.name);
       debugPrint('已取消 ${med.name} 的所有提醒');
       return;
     }
@@ -179,6 +196,8 @@ class _MedicationScreenState extends State<MedicationScreen>
     final maxReminders = missedDoseSettings['missedDoseMaxReminders'] as int? ?? 2;
 
     for (int i = 0; i < med.times_of_day_list.length; i++) {
+      if (!mounted || uid != _auth.currentUser?.uid) return;
+      if (!med.shouldResetStatus && i < med.times_status.length && med.times_status[i]) continue;
       final time = med.times_of_day_list[i];
       final now = DateTime.now();
 
@@ -197,7 +216,7 @@ class _MedicationScreenState extends State<MedicationScreen>
       }
 
       // 使用 medicineId 的 hashCode 和 index 產生唯一的通知 ID
-      final notificationId = medicineId.hashCode + i;
+      final notificationId = medicationNotificationId(medicineId, i);
 
       // 排程正常用藥提醒
       await notificationService.scheduleMedicationReminder(
@@ -215,6 +234,7 @@ class _MedicationScreenState extends State<MedicationScreen>
           : maxReminders;
 
       for (int j = 1; j <= actualMaxReminders; j++) {
+        if (!mounted || uid != _auth.currentUser?.uid) return;
         final missedDoseTime = scheduledTime.add(Duration(minutes: missedDoseInterval * j));
 
         await notificationService.scheduleMissedDoseReminder(
@@ -231,13 +251,16 @@ class _MedicationScreenState extends State<MedicationScreen>
     debugPrint('已為 ${med.name} 排程 ${med.times_of_day_list.length} 個用藥提醒及漏吃提醒');
   }
 
-  Future<void> _updateMedication(String medicineId, medicine medication) async {
+  Future<void> _updateMedication(String medicineId, medicine medication, medicine original) async {
     try {
-      await _medicationsCollection.doc(medicineId).set(medication);
+      final saved = await _firestoreService.editMedication(original, medication);
+      if (!mounted) return;
 
       // 取消舊的通知並重新排程
-      await _cancelMedicationReminders(medicineId, medication.times_of_day_list.length);
-      await _scheduleMedicationReminders(medicineId, medication);
+      await _pendingRestores[medicineId];
+      if (!mounted) return;
+      await NotificationService().cancelMedicationReminders(medicineId, legacyName: original.name);
+      await _scheduleMedicationReminders(medicineId, saved);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('藥品已更新'), backgroundColor: AppColors.success),
@@ -256,10 +279,14 @@ class _MedicationScreenState extends State<MedicationScreen>
         throw Exception("User not logged in.");
       }
 
-      // 取消該藥物的所有通知（假設最多 10 個時段）
-      await _cancelMedicationReminders(medicineId, 10);
-
+      // Wait for restoration, then delete before cancelling pending reminders.
+      await _pendingRestores[medicineId];
+      if (!mounted) return;
+      final old = await _medicationsCollection.doc(medicineId).get();
+      if (!mounted || _auth.currentUser?.uid != uid) return;
       await _firestore.collection('users').doc(uid).collection('medicine').doc(medicineId).delete();
+      if (!mounted || _auth.currentUser?.uid != uid) return;
+      await NotificationService().cancelMedicationReminders(medicineId, legacyName: old.data()?.name);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('藥品已刪除'), backgroundColor: AppColors.warning),
       );
@@ -267,15 +294,6 @@ class _MedicationScreenState extends State<MedicationScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('刪除失敗: $e'), backgroundColor: Colors.red),
       );
-    }
-  }
-
-  // 取消用藥提醒通知
-  Future<void> _cancelMedicationReminders(String medicineId, int count) async {
-    final notificationService = NotificationService();
-    for (int i = 0; i < count; i++) {
-      final notificationId = medicineId.hashCode + i;
-      await notificationService.cancelNotification(notificationId);
     }
   }
 
@@ -295,6 +313,9 @@ class _MedicationScreenState extends State<MedicationScreen>
         timeSlotIndex: timeIndex,
       );
       
+      await _pendingRestores[med.medicine_id];
+      if (!mounted) return;
+
       // --- UI 回饋邏輯 ---
       final String message;
       final Color color;
@@ -304,7 +325,7 @@ class _MedicationScreenState extends State<MedicationScreen>
         color = AppColors.success;
 
         // 取消該時段的用藥提醒和漏吃提醒
-        final notificationId = med.medicine_id.hashCode + timeIndex;
+        final notificationId = medicationNotificationId(med.medicine_id!, timeIndex);
         final notificationService = NotificationService();
         await notificationService.cancelNotification(notificationId);  // 取消用藥提醒
         await notificationService.cancelMissedDoseReminders(notificationId);  // 取消漏吃提醒
@@ -351,7 +372,7 @@ class _MedicationScreenState extends State<MedicationScreen>
 
         // 如果用藥時間還沒過，重新排程漏吃提醒
         if (scheduledTime.isAfter(now) || scheduledTime.add(Duration(minutes: missedDoseInterval * actualMaxReminders)).isAfter(now)) {
-          final notificationId = med.medicine_id.hashCode + timeIndex;
+          final notificationId = medicationNotificationId(med.medicine_id!, timeIndex);
 
           for (int j = 1; j <= actualMaxReminders; j++) {
             final missedDoseTime = scheduledTime.add(Duration(minutes: missedDoseInterval * j));
@@ -732,7 +753,7 @@ class _MedicationScreenState extends State<MedicationScreen>
             MaterialPageRoute(
               builder: (_) => MedicationDetailScreen(
                 medication: med,
-                onUpdate: (medicine editedMed) => _updateMedication(docId, editedMed),
+                onUpdate: (medicine editedMed) => _updateMedication(docId, editedMed, med),
                 onDelete: () => _deleteMedication(docId),
               ),
             ),

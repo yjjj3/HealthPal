@@ -1,3 +1,4 @@
+import '../utils/medication_schedule.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/initialization_gate.dart';
@@ -456,11 +457,10 @@ class NotificationService {
     try {
       // 取消所有相關的漏吃提醒（使用 ID 範圍）
       // 「持續提醒」模式最多 50 次
-      final maxReminders = _missedDoseSettings['missedDoseMaxReminders'] as int;
-      final cancelCount = maxReminders == 0 ? 50 : maxReminders;
+      final cancelCount = 50;
 
       for (int i = 1; i <= cancelCount; i++) {
-        await _localNotifications.cancel(baseId + 1000 + i);
+        await _localNotifications.cancel(baseId + i);
       }
       debugPrint('✅ 已取消 $cancelCount 個漏吃提醒，基礎 ID: $baseId');
     } catch (e) {
@@ -656,7 +656,7 @@ class NotificationService {
     final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
     // 使用 ID + 1000 的範圍來區分漏吃提醒
-    final notificationId = id + 1000 + reminderCount;
+    final notificationId = id + reminderCount;
 
     await _localNotifications.zonedSchedule(
       notificationId,
@@ -797,6 +797,20 @@ class NotificationService {
   // 其他方法
   // ============================================================
   
+  /// Cancel by persisted payload, including old IDs and every missed-dose notification.
+  Future<void> cancelMedicationReminders(String medicationId, {String? legacyName}) async {
+    if (isWeb) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final generation = _accountGeneration;
+    final requests = await _localNotifications.pendingNotificationRequests();
+    for (final request in requests) {
+      if (uid != FirebaseAuth.instance.currentUser?.uid || generation != _accountGeneration) return;
+      if (belongsToMedication(request.payload, medicationId, legacyName: legacyName)) {
+        await _localNotifications.cancel(request.id);
+      }
+    }
+  }
+
   Future<void> cancelNotification(int id) async {
     if (isWeb) return;
     await _localNotifications.cancel(id);

@@ -1,3 +1,4 @@
+import '../utils/medication_schedule.dart';
 import '../models/medication_dose.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // lib/screens/prescription_confirm_screen.dart
@@ -132,13 +133,13 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
         sources: _sources,
       );
       if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
-      await _scanService.saveMedications(medications);
+      final savedMedications = await _scanService.saveMedications(medications);
       if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
 
       // 排程提醒通知
       try {
         final notificationService = NotificationService();
-        for (final med in medications) {
+        for (final med in savedMedications) {
           for (int j = 0; j < med.times_of_day_list.length; j++) {
             final scheduledTime = med.times_of_day_list[j];
             final now = DateTime.now();
@@ -148,11 +149,11 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
               reminderTime = reminderTime.add(const Duration(days: 1));
             }
             await notificationService.scheduleMedicationReminder(
-              id: med.name.hashCode + j,
+              id: medicationNotificationId(med.medicine_id!, j),
               medicineName: med.name,
               dosage: med.dosage,
               scheduledTime: reminderTime,
-              medicationId: '${med.name}_$j',
+              medicationId: med.medicine_id!,
             );
           }
         }
