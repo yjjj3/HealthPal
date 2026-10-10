@@ -64,17 +64,14 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
   void _adjustTimeList(String? newFrequency) {
     if (newFrequency == null) return;
     
-    int targetCount = 1; 
-    if (newFrequency.contains('1次')) {
-      targetCount = 1;
-    } else if (newFrequency.contains('2次')) {
-      targetCount = 2;
-    } else if (newFrequency.contains('3次')) {
-      targetCount = 3;
-    } else {
-      targetCount = 1; 
+    final int targetCount;
+    try {
+      targetCount = MedicationDose.frequencyPerDay(newFrequency);
+    } on FormatException {
+      // Keep the existing schedule until an unsupported legacy regimen is confirmed.
+      return;
     }
-    
+
     if (_timesOfDays.length != targetCount) {
       setState(() {
         if (_timesOfDays.length > targetCount) {
@@ -299,6 +296,7 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
         total_pills: finalPills,
         times_of_day_list: _timesOfDays,
         times_status: newTimesStatus,
+        reminderEnabled: _editedMedication.reminderEnabled && _timesOfDays.isNotEmpty,
         instruction: _currentInstruction,
       );
 

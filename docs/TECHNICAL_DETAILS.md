@@ -136,3 +136,5 @@ flutter build apk --release --dart-define=AI_GATEWAY_URL=https://YOUR_DEPLOYED_E
 ## 持續驗證
 
 `.github/workflows/validate.yml` 使用 Flutter 3.41.9、Node 22、Java 21，執行 Flutter 測試、AI gateway 測試、Firestore 規則模擬器及 Android debug 建置。靜態分析遇到 error 會失敗，既有 warning/info 尚未全部清理。`tool/bootstrap_ci.py` 僅在 CI 產生缺少的公開 demo Firebase 設定，不替換既有設定，不包含正式憑證；CI APK 不用於正式服務。
+
+Android 建置使用 Gradle 8.14、AGP 8.13.1、Kotlin 2.3.20，Java/Kotlin target 17。依健康套件需求設定 minSdk 26（Android 8.0），並啟用通知套件要求的 core library desugaring。Kotlin／Gradle 相容範圍參考 [Kotlin 官方文件](https://kotlinlang.org/docs/gradle-configure-project.html)。

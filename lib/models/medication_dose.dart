@@ -62,7 +62,12 @@ class MedicationDose {
   }
 
   static int remainingDays(num supply, num dose, String frequency) {
-    final count = frequencyPerDay(frequency);
+    final int count;
+    try {
+      count = frequencyPerDay(frequency);
+    } on FormatException {
+      return 0;
+    } // Unknown regimens have no reliable estimate.
     if (!supply.isFinite ||
         !dose.isFinite ||
         supply <= 0 ||

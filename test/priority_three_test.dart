@@ -428,6 +428,10 @@ void main() {
       }
     },
   );
+  test('unknown legacy frequency has no guessed stock duration', () {
+    expect(MedicationDose.remainingDays(10, 0.5, '隔日1次'), 0);
+    expect(() => MedicationDose.frequencyPerDay('隔日1次'), throwsFormatException);
+  });
   test('editing unchanged times preserves intake even when reordered', () {
     final morning = DateTime(2026, 10, 10, 8),
         evening = DateTime(2026, 10, 10, 18);

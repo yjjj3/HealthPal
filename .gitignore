@@ -71,3 +71,6 @@ key.properties
 .env.development.json
 .secret.local
 functions/.secret.local
+
+# Kotlin build cache
+.kotlin/

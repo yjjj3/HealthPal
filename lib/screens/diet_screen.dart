@@ -285,10 +285,7 @@ class _DietScreenState extends State<DietScreen> {
       return;
     }
 
-    // 確保前一個分析已完全結束
-    if (_isAnalyzing && _analysisCompleter != null) {
-      await _analysisCompleter!.future;
-    }
+    if (_isAnalyzing) return;
 
     if (!mounted) return;
     setState(() => _isAnalyzing = true);
