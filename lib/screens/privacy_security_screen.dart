@@ -1,0 +1,473 @@
+import '../theme/app_colors.dart';
+import 'package:flutter/material.dart';
+import 'change_password_screen.dart';
+import '../services/biometric_service.dart';
+import '../services/session_timeout_service.dart';
+import '../services/screenshot_protection_service.dart';
+
+
+// =================================================================
+// PrivacySecurityScreen Widget
+// 這是「帳號設定」頁面
+// =================================================================
+class PrivacySecurityScreen extends StatefulWidget {
+  const PrivacySecurityScreen({super.key});
+
+  @override
+  State<PrivacySecurityScreen> createState() => _PrivacySecurityScreenState();
+}
+
+class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
+  final _biometricService = BiometricService();
+  final _sessionTimeoutService = SessionTimeoutService();
+  final _screenshotProtectionService = ScreenshotProtectionService();
+  bool _biometricEnabled = false;
+  bool _biometricAvailable = false;
+  String _biometricTypeName = '生物辨識';
+
+  // 閒置自動登出設定
+  bool _sessionTimeoutEnabled = true;
+  int _sessionTimeoutMinutes = 5;
+
+  // 截圖保護設定
+  bool _screenshotProtectionEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricSettings();
+    _loadSessionTimeoutSettings();
+    _loadScreenshotProtectionSettings();
+  }
+
+  Future<void> _loadSessionTimeoutSettings() async {
+    final isEnabled = await _sessionTimeoutService.isTimeoutEnabled();
+    final duration = await _sessionTimeoutService.getTimeoutDuration();
+
+    if (mounted) {
+      setState(() {
+        _sessionTimeoutEnabled = isEnabled;
+        _sessionTimeoutMinutes = duration;
+      });
+    }
+  }
+
+  Future<void> _toggleSessionTimeout(bool value) async {
+    await _sessionTimeoutService.setTimeoutEnabled(value);
+    setState(() => _sessionTimeoutEnabled = value);
+    _showSnackbar(value ? '閒置自動登出已啟用' : '閒置自動登出已停用');
+  }
+
+  Future<void> _showTimeoutDurationPicker() async {
+    final durations = [3, 5, 10, 15, 30];
+    final result = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.timer, color: AppColors.primary),
+            SizedBox(width: 12),
+            Text('閒置登出時間'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: durations.map((minutes) {
+            return RadioListTile<int>(
+              title: Text('$minutes 分鐘'),
+              value: minutes,
+              groupValue: _sessionTimeoutMinutes,
+              activeColor: AppColors.primary,
+              onChanged: (value) => Navigator.pop(context, value),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+
+    if (result != null && result != _sessionTimeoutMinutes) {
+      await _sessionTimeoutService.setTimeoutDuration(result);
+      setState(() => _sessionTimeoutMinutes = result);
+      _showSnackbar('閒置登出時間已設為 $result 分鐘');
+    }
+  }
+
+  Future<void> _loadScreenshotProtectionSettings() async {
+    final isEnabled = await _screenshotProtectionService.isProtectionEnabled();
+    if (mounted) {
+      setState(() {
+        _screenshotProtectionEnabled = isEnabled;
+      });
+    }
+  }
+
+  Future<void> _toggleScreenshotProtection(bool value) async {
+    await _screenshotProtectionService.setProtectionEnabled(value);
+    setState(() => _screenshotProtectionEnabled = value);
+    _showSnackbar(value ? '截圖保護已啟用' : '截圖保護已停用');
+  }
+
+  Future<void> _loadBiometricSettings() async {
+    final canCheck = await _biometricService.canCheckBiometrics();
+    final isSupported = await _biometricService.isDeviceSupported();
+    final types = await _biometricService.getAvailableBiometrics();
+    final isEnabled = await _biometricService.isBiometricLoginEnabled();
+
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = canCheck && isSupported;
+        _biometricTypeName = _biometricService.getBiometricTypeName(types);
+        _biometricEnabled = isEnabled;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      // 啟用生物辨識 - 需要先驗證
+      final authenticated = await _biometricService.authenticate(
+        reason: '驗證身份以啟用 $_biometricTypeName 登入',
+      );
+
+      if (!authenticated) {
+        _showSnackbar('驗證失敗，無法啟用 $_biometricTypeName');
+        return;
+      }
+
+      // 提示用戶需要重新登入以儲存憑證
+      if (mounted) {
+        final shouldProceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(
+                  _biometricTypeName == 'Face ID' ? Icons.face : Icons.fingerprint,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 12),
+                Text('啟用 $_biometricTypeName'),
+              ],
+            ),
+            content: Text(
+              '啟用後，下次登入時可使用 $_biometricTypeName 快速登入。\n\n'
+              '請注意：您需要在下次使用密碼登入時，系統會自動記住您的登入資訊。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('確認啟用'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldProceed == true) {
+          await _biometricService.setBiometricLoginEnabled(true);
+          setState(() => _biometricEnabled = true);
+          _showSnackbar('$_biometricTypeName 登入已啟用');
+        }
+      }
+    } else {
+      // 停用生物辨識
+      await _biometricService.setBiometricLoginEnabled(false);
+      await _biometricService.clearUserCredentials();
+      setState(() => _biometricEnabled = false);
+      _showSnackbar('$_biometricTypeName 登入已停用');
+    }
+  }
+
+  // 顯示操作結果的 SnackBar
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(milliseconds: 800),
+      ),
+    );
+  }
+
+  // 建立設定區塊標題
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey[600],
+        ),
+      ),
+    );
+  }
+
+  // 建立導航/操作設定項目 (使用 ListTile)
+  Widget _buildActionItem({
+    required String title,
+    required IconData icon,
+    VoidCallback? onTap,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: isDestructive ? AppColors.error : AppColors.primary
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: isDestructive ? AppColors.error : Colors.black87,
+          ),
+        ),
+        trailing: isDestructive ? null : const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      ),
+    );
+  }
+
+  // 彈出刪除帳號確認對話框
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('確認刪除帳號？'),
+        content: const Text('刪除後所有資料將無法復原。您確定要繼續嗎？'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showSnackbar('帳號刪除流程已啟動...');
+              // 實際應用中，這裡應執行刪除 API
+            },
+            child: const Text('確認刪除', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =================================================================
+  // build 函式 (主 UI 結構)
+  // =================================================================
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('帳號設定',
+            style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: const IconThemeData(color: Colors.black87),
+      ),
+      backgroundColor: AppColors.background,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            // --- 區塊 1: 登入安全 ---
+            _buildSectionTitle('登入安全'),
+
+            // 生物辨識登入開關
+            if (_biometricAvailable)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: SwitchListTile(
+                  secondary: Icon(
+                    _biometricTypeName == 'Face ID' ? Icons.face : Icons.fingerprint,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    '$_biometricTypeName 登入',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Text(
+                    _biometricEnabled ? '已啟用快速登入' : '使用 $_biometricTypeName 快速登入',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  value: _biometricEnabled,
+                  onChanged: _toggleBiometric,
+                  activeColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                ),
+              ),
+
+            // 閒置自動登出開關
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    secondary: const Icon(Icons.timer_off, color: AppColors.primary),
+                    title: const Text(
+                      '閒置自動登出',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      _sessionTimeoutEnabled
+                          ? '閒置 $_sessionTimeoutMinutes 分鐘後自動登出'
+                          : '已停用自動登出',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    value: _sessionTimeoutEnabled,
+                    onChanged: _toggleSessionTimeout,
+                    activeColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  ),
+                  if (_sessionTimeoutEnabled)
+                    InkWell(
+                      onTap: _showTimeoutDurationPicker,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(56, 0, 16, 12),
+                        child: Row(
+                          children: [
+                            Text(
+                              '設定時間：$_sessionTimeoutMinutes 分鐘',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.edit, size: 14, color: AppColors.primary),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // 截圖保護開關
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: SwitchListTile(
+                secondary: const Icon(Icons.screenshot, color: AppColors.primary),
+                title: const Text(
+                  '截圖保護',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: Text(
+                  _screenshotProtectionEnabled
+                      ? '已啟用，防止螢幕截圖和錄影'
+                      : '已停用，允許截圖',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                value: _screenshotProtectionEnabled,
+                onChanged: _toggleScreenshotProtection,
+                activeColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              ),
+            ),
+
+            // --- 區塊 2: 帳號安全 ---
+            _buildSectionTitle('帳號安全'),
+            _buildActionItem(
+              icon: Icons.lock_reset_rounded,
+              title: '更改密碼',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+                );
+              },
+            ),
+
+            // --- 區塊 3: 帳號管理 ---
+            _buildSectionTitle('帳號管理'),
+            _buildActionItem(
+              icon: Icons.delete_forever_rounded,
+              title: '刪除我的帳號',
+              isDestructive: true,
+              onTap: _showDeleteAccountDialog,
+            ),
+
+            const SizedBox(height: 30),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                '我們嚴格遵守隱私政策，您的個人健康資料會被安全加密儲存。',
+                style: TextStyle(color: AppColors.textHint, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}

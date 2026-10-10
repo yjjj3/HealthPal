@@ -1,0 +1,115 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 檢查用戶是否已登入
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 檢查用戶是否為資料擁有者
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 驗證必要欄位存在
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // 用戶資料 (users/{userId})
+    match /users/{userId} {
+      // 已登入用戶可讀取基本資料（接受家庭邀請時需要查詢對方的名字/email）
+      // 健康相關子集合仍受各自規則保護
+      allow read: if isAuthenticated();
+
+      // 建立帳號時驗證必要欄位
+      allow create: if isOwner(userId)
+        && hasRequiredFields(['email', 'fullName', 'createdAt']);
+
+      // 更新時不能修改 email 和 createdAt
+      allow update: if isOwner(userId)
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      // 允許用戶刪除自己的帳號
+      allow delete: if isOwner(userId);
+
+      // 用藥紀錄 (users/{userId}/medicine)
+      match /medicine/{medicineId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && hasRequiredFields(['name', 'frequency', 'times_status']);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
+      // 用藥日誌 (users/{userId}/medication_logs)
+      match /medication_logs/{logId} {
+        allow read: if isOwner(userId);
+        // 只能新增，不能修改或刪除（保持紀錄完整性）
+        allow create: if isOwner(userId)
+          && hasRequiredFields(['medicine_id', 'intake_time', 'is_taken']);
+        // 如果需要允許刪除，取消下面這行的註解
+        // allow delete: if isOwner(userId);
+      }
+
+      // 健康紀錄 (users/{userId}/health_records)
+      match /health_records/{recordId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
+      // 飲食紀錄 (users/{userId}/diet_records)
+      match /diet_records/{recordId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+    }
+    
+    // 家庭邀請碼 (family_invites/{inviteCode})
+    match /family_invites/{inviteCode} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.invitedBy == request.auth.uid;
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated()
+        && resource.data.invitedBy == request.auth.uid;
+    }
+    
+    /// 家庭成員 (users/{userId}/family_members)
+    match /users/{userId}/family_members/{memberId} {
+      allow read: if isOwner(userId);
+      allow create: if isAuthenticated(); // 允許接受邀請的人寫入對方的 family_members
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // 聊天室 (chats/{chatId})
+    match /chats/{chatId} {
+      // 文件不存在時(resource==null)允許讀取，用於檢查聊天室是否存在
+      // 文件存在時只有成員可以讀取
+      allow read: if isAuthenticated()
+        && (resource == null || request.auth.uid in resource.data.members);
+
+      // 建立聊天室：建立者必須是成員之一
+      allow create: if isAuthenticated()
+        && request.auth.uid in request.resource.data.members;
+
+      // 更新（發訊息時更新 lastMessage / unread）：必須是成員
+      allow update: if isAuthenticated()
+        && request.auth.uid in resource.data.members;
+
+      // 訊息子集合：聊天室成員才能讀寫
+      match /messages/{messageId} {
+        allow read, create: if isAuthenticated()
+          && exists(/databases/$(database)/documents/chats/$(chatId))
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
+      }
+    }
+  }
+}
