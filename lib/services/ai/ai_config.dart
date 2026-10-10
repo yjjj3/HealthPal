@@ -3,7 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'ai_client.dart';
 
 class AIConfig {
-  static const gateway = String.fromEnvironment('AI_GATEWAY_URL');
+  static const gateway = String.fromEnvironment(
+    'AI_GATEWAY_URL',
+    defaultValue: 'https://asia-east1-health-management-f046a.cloudfunctions.net/healthAI',
+  );
   static String get developmentKey =>
       kDebugMode ? const String.fromEnvironment('OPENAI_API_KEY') : '';
   static bool get usesGateway => gateway.trim().isNotEmpty;

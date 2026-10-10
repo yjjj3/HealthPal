@@ -131,10 +131,12 @@ firebase deploy --only functions:healthpal-ai --project health-management-f046a
 flutter build apk --release --dart-define=AI_GATEWAY_URL=https://YOUR_DEPLOYED_ENDPOINT
 ```
 
-部署需先完成專案的 Cloud Functions API 與必要計費設定。後端原始碼與測試已提供，端點及伺服器金鑰需在正式部署後設定；本文件不表示後端已上線。本機 debug 使用 `.env.development.json` 與 `--dart-define-from-file`，檔案被 Git 忽略；也可在 debug 設定 gateway 直接測試登入驗證。
+部署需先完成專案的 Cloud Functions API 與必要計費設定。後端已於 2026-10-11（台北時間）部署，伺服器金鑰由 Secret Manager 管理。端點為 `https://asia-east1-health-management-f046a.cloudfunctions.net/healthAI`，AIConfig 將其作為預設，可用編譯設定覆寫；更換 Firebase 專案時需部署自己的函式並更新端點。本機 debug 使用 `.env.development.json` 與 `--dart-define-from-file`，檔案被 Git 忽略；也可在 debug 設定 gateway 直接測試登入驗證。
 
 ## 持續驗證
 
 `.github/workflows/validate.yml` 使用 Flutter 3.41.9、Node 22、Java 21，執行 Flutter 測試、AI gateway 測試、Firestore 規則模擬器及 Android debug 建置。靜態分析遇到 error 會失敗，既有 warning/info 尚未全部清理。`tool/bootstrap_ci.py` 僅在 CI 產生缺少的公開 demo Firebase 設定，不替換既有設定，不包含正式憑證；CI APK 不用於正式服務。
 
 Android 建置使用 Gradle 8.14、AGP 8.13.1、Kotlin 2.3.20，Java/Kotlin target 17。依健康套件需求設定 minSdk 26（Android 8.0），並啟用通知套件要求的 core library desugaring。Kotlin／Gradle 相容範圍參考 [Kotlin 官方文件](https://kotlinlang.org/docs/gradle-configure-project.html)。
+
+線上驗證已確認：未登入與無效 token 回傳 401、不合法請求回傳 400、臨時非匿名帳號可取得 GPT-4o 回應（200）。專案本身停用匿名註冊，匿名 token 拒絕行為另有離線測試。測試帳號及個別額度文件已清除；線上測試不含健康紀錄。部署映像設定 7 天清理政策，不維持常駐最小實例；既有每分鐘與每日請求限額保持不變。

@@ -31,12 +31,12 @@ Dart SDK 要求為 `>=3.9.0 <4.0.0`；套件版本以 `pubspec.lock` 為準。
 
 1. 安裝相容的 Flutter SDK 與目標平台工具鏈。
 2. 執行 `flutter pub get`。
-3. 執行 `cp .env.development.example.json .env.development.json`，填入開發用 `OPENAI_API_KEY`；此檔不提交 Git。
+3. 執行 `cp .env.development.example.json .env.development.json`，將 `AI_GATEWAY_URL` 設為自己的已部署端點；此檔不提交 Git。本專案預設使用下方 HealthPal 線上端點，不需本機 OpenAI 金鑰；若要直接測試 OpenAI，僅在 debug 將 gateway 留空並填入開發用金鑰。
 4. 在自己的 Firebase 專案啟用 Authentication、Firestore 與 Storage，透過 FlutterFire CLI 執行 `flutterfire configure`，產生 `lib/firebase_options.dart` 與平台設定。這些本機設定不提交 Git。
 5. `firebase.json` 保留原專案 FlutterFire 對應資料，請重新產生為自己的設定；部署前檢查技術文件中的規則限制，並明確指定自己的 Firebase 專案。
 6. 設定 Google／Apple 登入、相機、通知、健康平台權限，再執行 `flutter run --dart-define-from-file=.env.development.json`，或使用 VS Code 的「HealthPal 開發」設定。
 
-`.env` 已移除 Flutter assets。直接呼叫 OpenAI 僅允許 debug；正式版使用 `--dart-define=AI_GATEWAY_URL=https://...`，金鑰由 Cloud Functions Secret Manager 保管。`functions/` 已提供驗證 Firebase ID token 與限制額度的後端，部署與設定方式見技術文件。未設定端點時正式版會明確停用 AI。
+`.env` 已移除 Flutter assets。直接呼叫 OpenAI 僅允許 debug；正式版使用 `--dart-define=AI_GATEWAY_URL=https://...`，金鑰由 Cloud Functions Secret Manager 保管。`functions/` 已提供驗證 Firebase ID token 與限制額度的後端，部署與設定方式見技術文件。本專案已部署預設端點；更換 Firebase 專案時必須以 `AI_GATEWAY_URL` 覆寫為自己的後端。
 
 ## 目錄與驗證
 
@@ -52,3 +52,5 @@ flutter test --no-pub
 詳見 [技術細節](docs/TECHNICAL_DETAILS.md)。
 
 GitHub Actions 會執行靜態分析、Flutter／後端／Firestore 規則測試及 Android debug 建置。CI 使用公開 demo Firebase 設定，產出的 APK 只供建置驗證，未連接正式服務。
+
+AI 端點已於 2026-10-11（台北時間）部署至 `asia-east1`：`https://asia-east1-health-management-f046a.cloudfunctions.net/healthAI`。新版 App 預設走此端點，需登入本專案的 Firebase 帳號；舊版 App 需重新建置／更新才能使用。
