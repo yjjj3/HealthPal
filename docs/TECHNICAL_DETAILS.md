@@ -65,9 +65,3 @@ AIAssistantService 與 HealthAIAnalyzer 蒐集個人資料、健康、用藥、�
 ## 測試狀態
 
 現有 widget test 是計數器範本。後續應優先驗證 JSON 解析、小數劑量、提醒時間換算、Firestore transaction、存取規則與真機通知。平台資料夾存在不等於已通過建置或功能驗證。
-
-### 本次驗證（2026-10-10）
-
-- `flutter analyze --no-pub`：回報 372 項問題，退出碼 1，尚未達到靜態分析全通過。
-- `flutter test --no-pub`：0 通過、1 失敗；範本測試遇到 Firebase `[core/no-app]`，且預期的計數器文字不存在。
-- 本次未進行正式版建置、後端部署或真機功能驗證。
