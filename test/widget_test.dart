@@ -1,30 +1,75 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:health_management_app/main.dart';
+import 'package:health_management_app/widgets/account_boundary.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const HealthManagementApp());
+  testWidgets(
+    'account change disposes old routes; same account preserves state',
+    (tester) async {
+      final ids = StreamController<String?>.broadcast();
+      var created = 0;
+      var disposed = 0;
+      await tester.pumpWidget(
+        AccountBoundary(
+          userIds: ids.stream,
+          initialUid: 'alice',
+          child: MaterialApp(
+            home: _Probe(
+              onCreate: () => created++,
+              onDispose: () => disposed++,
+            ),
+          ),
+        ),
+      );
+      expect(created, 1);
+      ids.add('alice');
+      await tester.pump();
+      expect(created, 1);
+      final context = tester.element(find.byType(_Probe));
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('old account route')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('old account route'), findsOneWidget);
+      ids.add('bob');
+      await tester.pumpAndSettle();
+      expect(find.text('old account route'), findsNothing);
+      expect(created, 2);
+      expect(disposed, 1);
+      ids.add(null);
+      await tester.pumpAndSettle();
+      expect(created, 3);
+      expect(disposed, 2);
+      await tester.pumpWidget(const SizedBox());
+      await ids.close();
+    },
+  );
+}
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+class _Probe extends StatefulWidget {
+  const _Probe({required this.onCreate, required this.onDispose});
+  final VoidCallback onCreate;
+  final VoidCallback onDispose;
+  @override
+  State<_Probe> createState() => _ProbeState();
+}
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+class _ProbeState extends State<_Probe> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onCreate();
+  }
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
-  });
+  @override
+  void dispose() {
+    widget.onDispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(body: Text('home'));
 }

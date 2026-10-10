@@ -32,6 +32,36 @@ NotificationService 包含 FCM 初始化、token 儲存、本機通知、用藥�
 
 HealthPlatformService 讀取血壓、心率、血糖、體重、睡眠、步數及運動並同步到 health_records。iOS 使用 Apple 健康、Android 使用 Health Connect，各平台權限與資料可用性需驗證。
 
+## 同步可靠性與效能
+
+儀表板與健康檔案直接解析 snapshot，不再用監聽事件觸發另一輪 get。各資料來源分別追蹤載入與錯誤狀態；重試會先取消舊訂閱，再建立新訂閱，並以世代編號及 UID 避免過期結果更新畫面。個人資料使用固定文件 stream，ProfileScreen 在父元件資料更新時同步更新模型。
+
+| 畫面／資料 | 查詢範圍 |
+| --- | --- |
+| 儀表板健康統計 | 最近 7 天 |
+| 健康檔案最近紀錄 | 最新 20 筆 |
+| 個人最新體重／家人單項健康卡 | 指定分類，最新 1 筆 |
+| 健康分析圖表 | 最近 90 天，涵蓋 7／30／90 天切換 |
+| 飲食首頁 | 當日，跨日後重新綁定 |
+| 健康、飲食、用藥歷史／聊天與訊息 | 首批 50 筆，按需載入更多 |
+| 儀表板家庭邀請 | pending 且符合目前使用者 email／電話 |
+
+LiveQueryWindow 只維持一組 Firestore 訂閱，多個訂閱者共用快照，較晚加入者也會取得最新資料。載入更多會擴大 limit，保留已載入範圍的即時新增、修改與刪除，避免游標頁面在併發寫入時產生邊界缺漏。代價是每次擴大範圍會重新訂閱整個已載入視窗；目前並未對所有已載入紀錄設總上限。分類篩選在 Firestore 查詢端執行，聊天搜尋只搜尋已載入項目。新增舊訊息不會強制捲回聊天室底部。
+
+AccountBoundary 包在 MaterialApp 外層：UID 改變或登出時，重新建立導覽及所有頁面並釋放舊訂閱。非同步資料載入、圖片讀取、登入及個人資料編輯補上 mounted／UID 防護；閒置計時器以世代檢查避免舊檢查誤登出新帳號。
+
+NotificationService 合併同時初始化呼叫，成功後不再重複初始化；初始化失敗可重試。FCM 前景及 token 更新各保留一組應用生命週期訂閱。通知設定即時監聽，帳號綁定依序執行；切換帳號取消舊排程，同帳號重新開啟應用保留排程。排程等候設定載入並驗證帳號，避免沿用舊帳號設定；token 非同步結果僅寫回原帳號。
+
+權限不足、登入失效、網路中斷、索引未就緒與空資料使用不同狀態。飲食讀取失敗不再放入示範紀錄，AI 回應解析失敗也不再產生測試營養數據；未成功取得或確認的分析不會因此寫入飲食紀錄。資料快照不再控制分析對話框的關閉。
+
+複合索引包含 health_records 的 category／record_time、family_invites 的 status／目標 email 或電話，以及 chats 的 members／lastTime。部署前可檢查現有索引，避免覆蓋其他設定；部署命令：
+
+```sh
+firebase deploy --only firestore:indexes --project health-management-f046a
+```
+
+索引部署完成後仍需等待狀態 READY；Firestore 模擬器測試不能代替線上索引可用性檢查。
+
 ## 資料路徑
 
 | Firestore 路徑 | 用途 |
@@ -59,7 +89,7 @@ AIAssistantService 與 HealthAIAnalyzer 蒐集個人資料、健康、用藥、�
 - 新家庭關係含 inviteId，規則以已接受的邀請驗證雙方關係。缺少此驗證紀錄的舊關係需雙方移除後重新綁定；不會自動信任原先寬鬆規則建立的資料。
 - 家庭移除一次刪除雙方關係；任何一方關係消失即停止授權。聊天室更新不可變更 members；新增訊息必須使用自己的 senderId。
 - users 基本文件仍允許所有已登入者讀取；健康或私人欄位與公開基本資料的拆分仍待後續處理。
-- 未包含 Storage rules 與 Firestore index 定義，後端部署尚不完整。
+- Firestore 複合索引定義於 firestore.indexes.json；Storage rules 尚未納入。
 - `.env` 被打包為 Flutter asset；不提交 Git 仍無法避免從發佈的應用取得金鑰。正式版應由後端保管金鑰、驗證使用者並限制額度。
 - 辨識結果需人工核對，尚無完整 OCR 正確率、藥品校驗或跨平台驗證證據。
 
@@ -68,11 +98,11 @@ AIAssistantService 與 HealthAIAnalyzer 蒐集個人資料、健康、用藥、�
 新增交易與同步測試及 Firestore 模擬器授權測試：
 
 ```sh
-flutter test --no-pub test/priority_one_test.dart
+flutter test --no-pub
 npm install
 npm run test:rules
 ```
 
 規則測試使用 demo-healthpal-priority1，本機需安裝 Firebase CLI 及其支援的 Java 版本。模擬器不會部署線上規則。正式規則需在新版應用及家庭關係重新綁定流程準備好後另行部署。
 
-原有 widget_test.dart 仍是計數器範本；真機通知、JSON 解析、小數劑量與跨平台建置尚待後續驗證。
+widget_test.dart 驗證帳號切換會清除舊導覽與頁面狀態。priority_two_test.dart 驗證即時視窗的新增、更新、刪除、載入更多、延後訂閱、釋放、分類查詢，以及初始化合併與失敗重試。真機通知、小數劑量、完整 JSON schema 與跨平台建置尚待後續驗證。

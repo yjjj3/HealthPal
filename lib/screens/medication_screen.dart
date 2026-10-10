@@ -1033,9 +1033,7 @@ class _MedicationScreenState extends State<MedicationScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MedicationLogScreen(
-          logs: _firestoreService.getMedicationLogs(), 
-        ),
+        builder: (_) => const MedicationLogScreen(),
       ),
     );
   }

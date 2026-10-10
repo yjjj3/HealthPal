@@ -1,3 +1,5 @@
+import '../utils/data_error_message.dart';
+import '../widgets/data_error_view.dart';
 import 'dart:async';
 import 'dart:io' show File; // 只保留 File
 import 'package:flutter/material.dart';
@@ -213,6 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // 新增：從健康記錄獲取的最新體重
   String? _latestWeightFromRecords;
+  String? _weightError;
 
   // 即時監聽的訂閱，需在 dispose() 時取消，避免每次切換分頁都多洩漏一組監聽器
   StreamSubscription<QuerySnapshot>? _healthRecordsSubscription;
@@ -226,6 +229,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _user = widget.userProfile;
+  }
+
+  @override
   void dispose() {
     _healthRecordsSubscription?.cancel();
     super.dispose();
@@ -236,10 +245,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
+    _healthRecordsSubscription?.cancel();
     _healthRecordsSubscription = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('health_records')
+        .where('category', isEqualTo: '體重')
+        .orderBy('record_time', descending: true).limit(1)
         .snapshots()
         .listen((snapshot) {
       if (mounted) {
@@ -259,7 +271,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             if (latestTime == null || (recordTime != null && recordTime.isAfter(latestTime))) {
               latestTime = recordTime;
-              final valueStr = data['value'] as String? ?? '';
+              final valueStr = data['value']?.toString() ?? '';
               // 解析 "65 kg" 格式
               final match = RegExp(r'([\d.]+)').firstMatch(valueStr);
               if (match != null) {
@@ -269,13 +281,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
         }
 
-        if (latestWeight != _latestWeightFromRecords) {
+        if (_weightError != null || latestWeight != _latestWeightFromRecords) {
           setState(() {
             _latestWeightFromRecords = latestWeight;
+            _weightError = null;
           });
         }
       }
-    });
+    }, onError: (Object error) { if (mounted) setState(() { _weightError = dataErrorMessage(error); _latestWeightFromRecords = null; }); });
   }
 
   // 新增：獲取顯示用的體重（優先使用健康記錄的體重）
@@ -317,12 +330,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? image = await _picker.pickImage(source: source);
+    if (!mounted) return;
     
     if (mounted) Navigator.of(context).pop(); 
     
     if (image != null) {
       if (kIsWeb) {
         final bytes = await image.readAsBytes();
+        if (!mounted) return;
         setState(() {
           _profileImageBytes = bytes;
           _user.profileImagePath = null; 
@@ -367,12 +382,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ? _user.copyWith(weight: _latestWeightFromRecords)
         : _user;
 
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     final updatedUser = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => EditProfileScreen(initialUser: userWithLatestWeight),
       ),
     );
 
+    if (!mounted || uid != FirebaseAuth.instance.currentUser?.uid) return;
     if (updatedUser != null && updatedUser is UserProfile) {
       // 儲存更新後的資料到 Firestore
       try {
@@ -428,7 +445,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(builder: (context) => const FamilyLinkScreen()),
     );
     // 返回時重新載入家庭成員
-    _loadFamilyMembers();
+    if (mounted) _loadFamilyMembers();
   }
   
   void _handleLogout() {
@@ -698,7 +715,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
+      body: _weightError != null ? DataErrorView(message: _weightError!, onRetry: _setupHealthRecordsListener) : SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [

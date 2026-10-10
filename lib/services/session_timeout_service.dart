@@ -17,6 +17,7 @@ class SessionTimeoutService {
   static const int defaultTimeoutMinutes = 5; // 預設閒置 5 分鐘
 
   Timer? _inactivityTimer;
+  int _timerGeneration = 0;
   DateTime? _lastActivityTime;
   VoidCallback? _onSessionExpired;
 
@@ -71,7 +72,8 @@ class SessionTimeoutService {
   /// 開始閒置計時器
   Future<void> _startInactivityTimer() async {
     _cancelTimer();
-
+    final generation = _timerGeneration;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     final isEnabled = await isTimeoutEnabled();
     if (!isEnabled) return;
 
@@ -79,6 +81,7 @@ class SessionTimeoutService {
     if (FirebaseAuth.instance.currentUser == null) return;
 
     final timeoutMinutes = await getTimeoutDuration();
+    if (generation != _timerGeneration || uid != FirebaseAuth.instance.currentUser?.uid) return;
 
     _inactivityTimer = Timer.periodic(
       const Duration(seconds: 30), // 每 30 秒檢查一次
@@ -97,6 +100,8 @@ class SessionTimeoutService {
   /// 檢查閒置狀態
   Future<void> _checkInactivity(int timeoutMinutes) async {
     if (_lastActivityTime == null) return;
+    final generation = _timerGeneration;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
     // 確保用戶已登入
     if (FirebaseAuth.instance.currentUser == null) {
@@ -105,6 +110,7 @@ class SessionTimeoutService {
     }
 
     final isEnabled = await isTimeoutEnabled();
+    if (generation != _timerGeneration || uid != FirebaseAuth.instance.currentUser?.uid) return;
     if (!isEnabled) {
       _cancelTimer();
       return;
@@ -135,6 +141,7 @@ class SessionTimeoutService {
 
   /// 取消計時器
   void _cancelTimer() {
+    _timerGeneration++;
     _inactivityTimer?.cancel();
     _inactivityTimer = null;
   }

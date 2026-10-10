@@ -1,3 +1,6 @@
+import '../services/live_query_window.dart';
+import '../utils/data_error_message.dart';
+import '../widgets/data_error_view.dart';
 import '../services/chat_message_service.dart';
 import 'dart:async';
 import '../theme/app_colors.dart';
@@ -42,6 +45,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   String? _pendingMessageText;
   bool _showEmojiPicker = false;
   bool _chatRoomCreated = false;
+  String? _chatError;
+  late LiveQueryWindow _messageWindow;
   Timestamp? _lastMessageTimestamp;
   String _myName = '用戶';
 
@@ -65,11 +70,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _safeChatId = widget.chatId; 
     }
 
+    _messageWindow = LiveQueryWindow(_firestore.collection('chats').doc(_safeChatId)
+      .collection('messages').orderBy('timestamp', descending: true),
+      onChanged: () { if (mounted) setState(() {}); });
     _initializeChatRoom();
     _messageController.addListener(() => setState(() {}));
   }
 
   Future<void> _initializeChatRoom() async {
+    if (mounted) setState(() => _chatError = null);
     await _loadMyName();
     if (!mounted) return;
     await _ensureChatRoomExists();
@@ -79,28 +88,29 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _setupAutoScroll();
   }
 
+  String? _latestMessageId;
+
   void _setupAutoScroll() {
-    _autoScrollSubscription = _firestore
-        .collection('chats')
-        .doc(_safeChatId)
-        .collection('messages')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .listen((snapshot) {
-      if (snapshot.docChanges.isNotEmpty) {
-        final isNewMessage = snapshot.docChanges.any((change) => change.type == DocumentChangeType.added);
-        if (isNewMessage) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Future.delayed(const Duration(milliseconds: 50), () => _scrollToBottom());
-            });
-        }
+    _autoScrollSubscription = _messageWindow.stream.listen((snapshot) {
+      if (!mounted) return;
+      final latestId = snapshot.docs.isEmpty ? null : snapshot.docs.first.id;
+      final hasNewLatest = latestId != _latestMessageId && snapshot.docChanges.any(
+        (change) => change.type == DocumentChangeType.added && change.doc.id == latestId);
+      _latestMessageId = latestId;
+      if (hasNewLatest) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _scrollToBottom();
+        });
       }
+    }, onError: (Object error) {
+      if (mounted) setState(() => _chatError = dataErrorMessage(error));
     });
   }
 
   @override
   void dispose() {
     _autoScrollSubscription?.cancel();
+    _messageWindow.dispose();
     _unreadSubscription?.cancel();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -138,7 +148,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         });
       }
     } catch (e) {
-      print('❌ 檢查聊天室失敗: $e');
+      if (mounted) setState(() => _chatError = dataErrorMessage(e));
     }
   }
 
@@ -173,12 +183,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
       if (!mounted) return;
       setState(() {
+        _chatError = null;
         _chatRoomCreated = true;
       });
       
       print('✅ 聊天室創建成功');
     } catch (e) {
-      print('❌ 創建聊天室失敗: $e');
+      if (mounted) setState(() => _chatError = dataErrorMessage(e));
     }
   }
 
@@ -209,6 +220,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     if (user == null) return;
 
     _unreadSubscription = _firestore.collection('chats').doc(_safeChatId).snapshots().listen((snapshot) {
+      if (!mounted || user.uid != _auth.currentUser?.uid) return;
       if (snapshot.exists) {
         final data = snapshot.data()!;
         final unread = (data['unread'] ?? {})[user.uid] ?? 0;
@@ -219,7 +231,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           _markMessagesAsRead();
         }
       }
-    });
+    }, onError: (Object error) { if (mounted) setState(() => _chatError = dataErrorMessage(error)); });
   }
 
   void _sendMessage() async {
@@ -282,7 +294,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
+    if (mounted && _scrollController.hasClients) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 300),
@@ -611,19 +623,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           ),
         ],
       ),
-      body: !_chatRoomCreated
+      body: _chatError != null
+          ? DataErrorView(message: _chatError!, onRetry: () {
+              _chatError = null;
+              _autoScrollSubscription?.cancel();
+              _unreadSubscription?.cancel();
+              _messageWindow.refresh();
+              _initializeChatRoom();
+            })
+          : !_chatRoomCreated
           ? _buildLoadingState()
           : Column(
               children: [
+                if (_messageWindow.hasMore) TextButton(
+                  onPressed: _messageWindow.loadMore, child: const Text('載入更早的訊息')),
                 // 訊息列表
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: _firestore
-                        .collection('chats')
-                        .doc(_safeChatId)
-                        .collection('messages')
-                        .orderBy('timestamp', descending: false)
-                        .snapshots(),
+                    stream: _messageWindow.stream,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(
@@ -654,7 +671,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         );
                       }
 
-                      final messages = snapshot.data!.docs.reversed.toList();
+                      final messages = snapshot.data!.docs.toList();
 
                       return ListView.builder(
                         controller: _scrollController,

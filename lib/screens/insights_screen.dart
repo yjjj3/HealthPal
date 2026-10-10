@@ -1,3 +1,5 @@
+import '../utils/data_error_message.dart';
+import '../widgets/data_error_view.dart';
 // lib/screens/insights_screen.dart
 import 'dart:math' show max;
 import 'package:fl_chart/fl_chart.dart';
@@ -80,6 +82,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
      });
   }
 
+  late Stream<List<RecordData>> _recordsStream = _getHealthRecordsStream();
+
   Stream<List<RecordData>> _getHealthRecordsStream() {
     final uid = _auth.currentUser?.uid;
     
@@ -91,28 +95,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
         .collection('users')
         .doc(uid)
         .collection('health_records')
+        .where('record_time', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 90))))
         .orderBy('record_time', descending: false)
         .snapshots()
-        .map((snapshot) {
-            final records = snapshot.docs.map<RecordData>((doc) {
-              try {
-                return RecordData.fromFirestore(doc);
-              } catch (e) {
-                debugPrint('DEBUG: 解析文件錯誤 ${doc.id}: $e');
-                // 創建一個基本的 RecordData 對象作為備用
-                return RecordData(
-                  id: doc.id,
-                  category: '錯誤',
-                  value: '解析錯誤',
-                  unit: '',
-                  emoji: '',
-                  recordTime: DateTime.now(),
-                );
-              }
-            }).toList();
-            
-            return records;
-        });
+        .map((snapshot) => snapshot.docs.map(RecordData.fromFirestore).toList());
   }
 
   List<RecordData> _getFilteredRecords(List<RecordData> allRecords) {
@@ -433,23 +419,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
       ),
       body: SafeArea(
         child: StreamBuilder<List<RecordData>>(
-          stream: _getHealthRecordsStream(),
+          stream: _recordsStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
             if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
-                    const SizedBox(height: 16),
-                    const Text('載入數據失敗', style: TextStyle(fontSize: 18, color: Colors.red)),
-                  ],
-                ),
-              );
+              return DataErrorView(message: dataErrorMessage(snapshot.error!), onRetry: () { setState(() => _recordsStream = _getHealthRecordsStream()); });
             }
 
             final allRecords = snapshot.data ?? [];

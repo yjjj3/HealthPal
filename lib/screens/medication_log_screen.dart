@@ -1,3 +1,7 @@
+import '../utils/data_error_message.dart';
+import '../widgets/data_error_view.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/live_query_window.dart';
 import '../theme/app_colors.dart';
 // lib/screens/medication_log_screen.dart
 
@@ -6,10 +10,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class MedicationLogScreen extends StatefulWidget {
-  final Stream<QuerySnapshot> logs;
+  final Stream<QuerySnapshot>? logs;
 
   const MedicationLogScreen({
-    required this.logs,
+    this.logs,
     Key? key,
   }) : super(key: key);
 
@@ -19,10 +23,24 @@ class MedicationLogScreen extends StatefulWidget {
 
 class _MedicationLogScreenState extends State<MedicationLogScreen> {
   final Set<String> _expandedDates = {};
+  LiveQueryWindow? _window;
+  late Stream<QuerySnapshot> _logsStream;
+  @override
+  void dispose() { _window?.dispose(); super.dispose(); }
+
 
   @override
   void initState() {
     super.initState();
+    final uid = widget.logs == null ? FirebaseAuth.instance.currentUser?.uid : null;
+    if (widget.logs != null) _logsStream = widget.logs!;
+    else if (uid == null) _logsStream = const Stream.empty();
+    else {
+      _window = LiveQueryWindow(FirebaseFirestore.instance.collection('users').doc(uid)
+        .collection('medication_logs').orderBy('intake_time', descending: true),
+        onChanged: () { if (mounted) setState(() {}); });
+      _logsStream = _window!.stream;
+    }
     // 預設展開今天的紀錄
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     _expandedDates.add(today);
@@ -160,6 +178,8 @@ class _MedicationLogScreenState extends State<MedicationLogScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        actions: [TextButton(onPressed: _window?.hasMore == true ? () => _window?.loadMore() : null,
+          child: const Text('載入更多'))],
         elevation: 0,
         backgroundColor: Colors.white,
         title: const Text(
@@ -169,11 +189,11 @@ class _MedicationLogScreenState extends State<MedicationLogScreen> {
         iconTheme: const IconThemeData(color: AppColors.primary),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: widget.logs,
+        stream: _logsStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             debugPrint('Firestore Stream Error: ${snapshot.error}');
-            return Center(child: Text('載入日誌發生錯誤：${snapshot.error}'));
+            return DataErrorView(message: dataErrorMessage(snapshot.error!), onRetry: _window == null ? null : () => _window?.refresh());
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {

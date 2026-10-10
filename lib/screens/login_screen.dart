@@ -343,6 +343,7 @@ class _LoginFormState extends State<_LoginForm> {
           await _biometricService.saveUserCredentials(email, _password);
         }
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('登入成功'),

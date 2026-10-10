@@ -47,6 +47,6 @@ flutter analyze --no-pub
 flutter test --no-pub
 ```
 
-現有 `test/widget_test.dart` 仍是計數器範本，與 HealthPal 不符，亦未初始化 Firebase，不能作為功能驗證依據。雖包含 Android、iOS、Web 與桌面平台資料夾，部分服務使用 `dart:io` 或裝置專屬套件，各平台需另外驗證。
+測試涵蓋資料交易、即時分頁、初始化重試與帳號切換；Firestore 規則另以 `npm run test:rules` 在模擬器驗證。雖包含 Android、iOS、Web 與桌面平台資料夾，部分服務使用 `dart:io` 或裝置專屬套件，各平台需另外驗證。
 
 詳見 [技術細節](docs/TECHNICAL_DETAILS.md)。

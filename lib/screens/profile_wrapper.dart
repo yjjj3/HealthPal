@@ -1,3 +1,5 @@
+import '../widgets/data_error_view.dart';
+import '../utils/data_error_message.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // 導入 FirebaseAuth
@@ -17,6 +19,13 @@ class ProfileWrapper extends StatefulWidget {
 class _ProfileWrapperState extends State<ProfileWrapper> {
   // 檢查用戶是否已登入
   final User? currentUser = FirebaseAuth.instance.currentUser;
+  Stream<DocumentSnapshot<Map<String, dynamic>>>? _profileStream;
+  @override
+  void initState() {
+    super.initState();
+    final uid = currentUser?.uid;
+    if (uid != null) _profileStream = FirebaseFirestore.instance.collection('users').doc(uid).snapshots();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,22 +38,15 @@ class _ProfileWrapperState extends State<ProfileWrapper> {
     // 🚨 這是關鍵的修改：使用當前登入用戶的 UID
     final String currentUserId = currentUser!.uid;
     
-    // 2. 建立 Firestore 文件參考
-    final DocumentReference<Map<String, dynamic>> profileRef = 
-        FirebaseFirestore.instance.collection('users').doc(currentUserId);
-    
-    // 3. 使用 FutureBuilder 讀取一次資料
-    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      future: profileRef.get(),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: _profileStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Text('載入資料錯誤: ${snapshot.error}'),
-          );
+          return DataErrorView(message: dataErrorMessage(snapshot.error!), onRetry: () { setState(() { _profileStream = FirebaseFirestore.instance.collection('users').doc(currentUserId).snapshots(); }); });
         }
 
         // 檢查文件是否存在
@@ -52,7 +54,7 @@ class _ProfileWrapperState extends State<ProfileWrapper> {
           // 資料存在：將 Firestore 資料轉換為 UserProfile 物件
           try {
              final userProfile = UserProfile.fromFirestore(snapshot.data!);
-             return ProfileScreen(userProfile: userProfile);
+             return ProfileScreen(key: ValueKey(currentUserId), userProfile: userProfile);
           } catch (e) {
              // 處理轉換錯誤，例如資料欄位不完整
              debugPrint('UserProfile 轉換失敗: $e');

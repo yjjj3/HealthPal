@@ -1,3 +1,6 @@
+import '../services/live_query_window.dart';
+import '../utils/data_error_message.dart';
+import '../widgets/data_error_view.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -24,10 +27,28 @@ class _RecordsScreenState extends State<RecordsScreen> {
   String selectedCategory = '全部';
   final Set<String> _collapsedDates = {};
 
+  LiveQueryWindow? _window;
+  Stream<QuerySnapshot<Map<String, dynamic>>>? _recordsStream;
+  @override
+  void initState() { super.initState(); _bindRecords(); }
+  @override
+  void dispose() { _window?.dispose(); super.dispose(); }
+  void _bindRecords() {
+    _window?.dispose();
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) { _recordsStream = const Stream.empty(); return; }
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('users').doc(uid).collection('health_records');
+    if (selectedCategory != '全部') query = query.where('category', isEqualTo: selectedCategory);
+    _window = LiveQueryWindow(query.orderBy('record_time', descending: true),
+      onChanged: () { if (mounted) setState(() {}); });
+    _recordsStream = _window!.stream;
+  }
+
   // 選擇分類
   void _selectCategory(String? category) {
     setState(() {
       selectedCategory = category ?? '全部';
+      _bindRecords();
     });
   }
 
@@ -696,6 +717,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
         title: const Text('健康記錄'),
         centerTitle: false,
         actions: [
+          TextButton(onPressed: _window?.hasMore == true ? () => _window?.loadMore() : null, child: const Text('載入更多')),
           if (selectedCategory != '全部')
             IconButton(
               icon: const Icon(Icons.add_circle_rounded, color: AppColors.primary),
@@ -722,8 +744,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
             // 從 Firestore 即時取得資料
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: _firestoreService.getHealthRecords(),
+                stream: _recordsStream,
                 builder: (context, snapshot) {
+                  if (snapshot.hasError) return DataErrorView(message: dataErrorMessage(snapshot.error!), onRetry: () => _window?.refresh());
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }

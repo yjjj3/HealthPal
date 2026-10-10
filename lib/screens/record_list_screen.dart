@@ -1,3 +1,5 @@
+import '../services/live_query_window.dart';
+import '../utils/data_error_message.dart';
 import '../theme/app_colors.dart';
 // lib/screens/record_list_screen.dart
 
@@ -20,6 +22,16 @@ class _RecordListScreenState extends State<RecordListScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
   String _selectedFilter = 'all';
+  LiveQueryWindow? _window;
+  late Stream<List<RecordData>> _recordsStream;
+  @override
+  void initState() {
+    super.initState();
+    _recordsStream = _getHealthRecordsStream();
+  }
+  @override
+  void dispose() { _window?.dispose(); super.dispose(); }
+
 
   Stream<List<RecordData>> _getHealthRecordsStream() {
     final uid = _auth.currentUser?.uid;
@@ -28,13 +40,12 @@ class _RecordListScreenState extends State<RecordListScreen> {
       return Stream.value([]);
     }
     
-    return _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('health_records')
-        .orderBy('record_time', descending: true)
-        .snapshots()
-        .map((snapshot) {
+    Query<Map<String, dynamic>> query = _firestore.collection('users').doc(uid).collection('health_records');
+    final category = {'blood_pressure': '血壓', 'glucose': '血糖', 'weight': '體重'}[_selectedFilter];
+    if (category != null) query = query.where('category', isEqualTo: category);
+    _window = LiveQueryWindow(query.orderBy('record_time', descending: true),
+      onChanged: () { if (mounted) setState(() {}); });
+    return _window!.stream.map((snapshot) {
       return snapshot.docs.map((doc) {
         return RecordData.fromFirestore(doc);
       }).toList();
@@ -70,10 +81,12 @@ class _RecordListScreenState extends State<RecordListScreen> {
           .doc(recordId)
           .delete();
       
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('記錄已刪除')),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('刪除失敗: $e')),
       );
@@ -151,6 +164,8 @@ class _RecordListScreenState extends State<RecordListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        actions: [TextButton(onPressed: _window?.hasMore == true ? () => _window?.loadMore() : null,
+          child: const Text('載入更多'))],
         title: const Text('所有測量紀錄'),
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.black87),
@@ -187,7 +202,7 @@ class _RecordListScreenState extends State<RecordListScreen> {
           // 记录列表
           Expanded(
             child: StreamBuilder<List<RecordData>>(
-              stream: _getHealthRecordsStream(),
+              stream: _recordsStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -200,10 +215,10 @@ class _RecordListScreenState extends State<RecordListScreen> {
                       children: [
                         const Icon(Icons.error_outline, size: 60, color: Colors.red),
                         const SizedBox(height: 16),
-                        const Text('載入失敗', style: TextStyle(fontSize: 18)),
+                        Text(dataErrorMessage(snapshot.error!), style: const TextStyle(fontSize: 18)),
                         const SizedBox(height: 8),
                         TextButton(
-                          onPressed: () => setState(() {}),
+                          onPressed: () => _window?.refresh(),
                           child: const Text('重試'),
                         ),
                       ],
@@ -260,6 +275,8 @@ class _RecordListScreenState extends State<RecordListScreen> {
         onSelected: (selected) {
           setState(() {
             _selectedFilter = value;
+            _window?.dispose();
+            _recordsStream = _getHealthRecordsStream();
           });
         },
       ),

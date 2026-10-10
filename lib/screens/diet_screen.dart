@@ -1,7 +1,7 @@
+import '../utils/data_error_message.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -25,6 +25,9 @@ class _DietScreenState extends State<DietScreen> {
   final List<String> _mealTypes = ['早餐', '午餐', '晚餐', '點心'];
   bool _isAnalyzing = false;
   bool _isLoading = true;
+  String? _dataError;
+  Timer? _dayTimer;
+  DateTime? _queryDay;
   List<Map<String, dynamic>> _dietRecords = [];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -81,6 +84,11 @@ class _DietScreenState extends State<DietScreen> {
     super.initState();
     _initializeServices();
     _startListeningToDietRecords();
+    _dayTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      if (mounted && _queryDay != today) _startListeningToDietRecords();
+    });
   }
 
   @override
@@ -88,6 +96,7 @@ class _DietScreenState extends State<DietScreen> {
     // 取消訂閱以避免記憶體洩漏
     _dietListenerGeneration++;
     _dietRetryTimer?.cancel();
+    _dayTimer?.cancel();
     _dietRecordsSubscription?.cancel();
 
     // 取消任何正在進行的分析
@@ -107,12 +116,6 @@ class _DietScreenState extends State<DietScreen> {
       // AI 服務初始化失敗，靜默處理
     }
 
-    // 檢查 Firebase 連線
-    try {
-      await _firestore.collection('test').doc('test').get();
-    } catch (_) {
-      // Firebase 連線異常，靜默處理
-    }
   }
 
   // 使用 Stream 監聽實時資料
@@ -123,12 +126,14 @@ class _DietScreenState extends State<DietScreen> {
     _dietRecordsSubscription = null;
     await previous?.cancel();
     if (!mounted || generation != _dietListenerGeneration) return;
-    setState(() => _isLoading = true);
+    final now = DateTime.now();
+    _queryDay = DateTime(now.year, now.month, now.day);
+    setState(() { _isLoading = true; _dataError = null; });
 
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        _loadTestData();
+        setState(() { _dietRecords = []; _isLoading = false; _dataError = '請先登入'; });
         return;
       }
 
@@ -137,6 +142,8 @@ class _DietScreenState extends State<DietScreen> {
           .collection('users')
           .doc(user.uid)
           .collection('diet_records')
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(_queryDay!))
+          .where('timestamp', isLessThan: Timestamp.fromDate(_queryDay!.add(const Duration(days: 1))))
           .orderBy('timestamp', descending: true)
           .snapshots()
           .listen(
@@ -145,6 +152,7 @@ class _DietScreenState extends State<DietScreen> {
               // 處理資料前先檢查是否還有連接
               if (!mounted || generation != _dietListenerGeneration) return;
 
+              try {
               final records = snapshot.docs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 final timestamp = data['timestamp'] as Timestamp?;
@@ -173,19 +181,18 @@ class _DietScreenState extends State<DietScreen> {
                 setState(() {
                   _dietRecords = records;
                   _isLoading = false;
+                  _dataError = null;
                 });
 
-                // 新增：檢查是否有正在進行的分析，如果有就關閉對話框
-                if (_isAnalyzing &&
-                    _currentFoodName != null &&
-                    _currentMealType != null) {
-                  _closeAnalysisDialog();
-                }
+
+              }
+              } catch (error) {
+                setState(() { _isLoading = false; _dataError = dataErrorMessage(error); });
               }
             },
             onError: (Object error) {
               if (!mounted || generation != _dietListenerGeneration) return;
-              setState(() => _isLoading = false);
+              setState(() { _isLoading = false; _dataError = dataErrorMessage(error); });
               // Permission errors need configuration changes, not endless retries.
               if (error is FirebaseException &&
                   error.code == 'permission-denied') {
@@ -203,7 +210,7 @@ class _DietScreenState extends State<DietScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _loadTestData();
+          _dataError = dataErrorMessage(e);
         });
       }
     }
@@ -241,59 +248,6 @@ class _DietScreenState extends State<DietScreen> {
     } catch (e) {
       return defaultValue;
     }
-  }
-
-  void _loadTestData() {
-    // 測試數據
-    final testMeals = [
-      {
-        'id': '1',
-        'mealType': '早餐',
-        'foodName': '燕麥粥',
-        'calories': 150,
-        'protein': 5.0,
-        'carbs': 27.0,
-        'fat': 3.0,
-        'notes': '加蜂蜜和水果',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 3)),
-        'portion': '一碗',
-        'category': '主食',
-        'healthScore': 8,
-      },
-      {
-        'id': '2',
-        'mealType': '午餐',
-        'foodName': '雞胸肉沙拉',
-        'calories': 320,
-        'protein': 30.0,
-        'carbs': 15.0,
-        'fat': 12.0,
-        'notes': '使用橄欖油調味',
-        'timestamp': DateTime.now(),
-        'portion': '一盤',
-        'category': '蛋白質',
-        'healthScore': 9,
-      },
-      {
-        'id': '3',
-        'mealType': '點心',
-        'foodName': '蘋果',
-        'calories': 95,
-        'protein': 0.5,
-        'carbs': 25.0,
-        'fat': 0.3,
-        'notes': '中型蘋果一顆',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 1)),
-        'portion': '一顆',
-        'category': '水果',
-        'healthScore': 8,
-      },
-    ];
-
-    setState(() {
-      _dietRecords = testMeals;
-      _isLoading = false;
-    });
   }
 
   // ==================== AI 分析功能 ====================
@@ -340,6 +294,7 @@ class _DietScreenState extends State<DietScreen> {
       await _analysisCompleter!.future;
     }
 
+    if (!mounted) return;
     setState(() => _isAnalyzing = true);
     _currentFoodName = foodName;
     _currentMealType = mealType;
@@ -448,6 +403,7 @@ class _DietScreenState extends State<DietScreen> {
           .timeout(const Duration(seconds: 15));
 
 
+      if (!mounted) return;
       // 解析 AI 回應
       _currentAnalysisResult = _parseAIResponse(response, foodName, mealType);
 
@@ -489,7 +445,7 @@ class _DietScreenState extends State<DietScreen> {
     }
       _analysisCompleter = null;
 
-      // 注意：這裡不關閉對話框，等待飲食記錄新增成功後自動關閉
+      // Result confirmation manages its own dialog lifecycle.
     }
   }
 
@@ -655,139 +611,10 @@ class _DietScreenState extends State<DietScreen> {
 
       return result;
     } catch (_) {
-      // 解析失敗，返回測試分析結果
-      return _generateTestAnalysis(foodName, mealType);
+      throw const FormatException('分析結果格式不正確，請重試，尚未新增飲食紀錄。');
     }
   }
 
-  Map<String, dynamic> _generateTestAnalysis(String foodName, String mealType) {
-    // 如果輸入明顯不是食物，返回非食物結果
-    if (!_isFoodInput(foodName)) {
-      return {
-        'is_food': false,
-        'error_message': '「$foodName」不是食物名稱。請輸入真實的食物或飲料。',
-        'suggestions': '建議輸入如：水果、蔬菜、肉類、飲料等具體食物名稱。',
-      };
-    }
-
-    final random = Random();
-
-    // 根據常見食物類型生成數據
-    double calories, protein, carbs, fat;
-    int healthScore;
-    String suggestions, portion, category;
-
-    if (foodName.contains('雞') ||
-        foodName.contains('胸') ||
-        foodName.toLowerCase().contains('chicken')) {
-      calories = 165.0;
-      protein = 31.0;
-      carbs = 0.0;
-      fat = 3.6;
-      healthScore = 9;
-      suggestions = '雞肉是高蛋白低脂肪的優質選擇，適合健身和減重。建議搭配蔬菜食用。';
-      portion = '100克';
-      category = '蛋白質';
-    } else if (foodName.contains('飯') ||
-        foodName.contains('米') ||
-        foodName.toLowerCase().contains('rice')) {
-      calories = 200.0;
-      protein = 4.0;
-      carbs = 45.0;
-      fat = 0.5;
-      healthScore = 7;
-      suggestions = '米飯是主要碳水化合物來源，建議搭配蛋白質和蔬菜，控制分量。';
-      portion = '一碗 (150克)';
-      category = '主食';
-    } else if (foodName.contains('菜') ||
-        foodName.contains('蔬') ||
-        foodName.toLowerCase().contains('vegetable')) {
-      calories = 50.0;
-      protein = 2.0;
-      carbs = 10.0;
-      fat = 0.3;
-      healthScore = 9;
-      suggestions = '蔬菜富含纖維和維生素，建議每天攝取300-500克不同種類的蔬菜。';
-      portion = '一碟 (100克)';
-      category = '蔬菜';
-    } else if (foodName.contains('巧克') ||
-        foodName.toLowerCase().contains('chocolate')) {
-      calories = 220.0;
-      protein = 3.0;
-      carbs = 25.0;
-      fat = 12.0;
-      healthScore = 4;
-      suggestions = '巧克力含糖量高，建議適量食用。可選擇黑巧克力替代。';
-      portion = '一片 (30克)';
-      category = '點心';
-    } else if (foodName.contains('蛋') ||
-        foodName.toLowerCase().contains('egg')) {
-      calories = 70.0;
-      protein = 6.0;
-      carbs = 0.6;
-      fat = 5.0;
-      healthScore = 8;
-      suggestions = '雞蛋是優質蛋白質來源，富含多種維生素。建議適量食用。';
-      portion = '一顆 (50克)';
-      category = '蛋白質';
-    } else if (foodName.contains('魚') ||
-        foodName.toLowerCase().contains('fish')) {
-      calories = 180.0;
-      protein = 22.0;
-      carbs = 0.0;
-      fat = 10.0;
-      healthScore = 9;
-      suggestions = '魚肉富含Omega-3脂肪酸，有益心血管健康。建議每週食用2-3次。';
-      portion = '一份 (100克)';
-      category = '蛋白質';
-    } else if (foodName.contains('麵') ||
-        foodName.toLowerCase().contains('noodle')) {
-      calories = 220.0;
-      protein = 8.0;
-      carbs = 42.0;
-      fat = 2.0;
-      healthScore = 6;
-      suggestions = '麵食是碳水化合物的來源，建議搭配蔬菜和蛋白質，避免過量醬料。';
-      portion = '一碗 (200克)';
-      category = '主食';
-    } else if (foodName.contains('果') ||
-        foodName.toLowerCase().contains('fruit')) {
-      calories = 60.0;
-      protein = 0.5;
-      carbs = 15.0;
-      fat = 0.2;
-      healthScore = 8;
-      suggestions = '水果富含維生素和纖維，建議每天攝取2-4份不同種類的水果。';
-      portion = '一份 (100克)';
-      category = '水果';
-    } else {
-      // 隨機生成
-      calories = (random.nextDouble() * 300 + 100).roundToDouble();
-      protein = (random.nextDouble() * 30 + 5);
-      carbs = (random.nextDouble() * 40 + 10);
-      fat = (random.nextDouble() * 20 + 3);
-      healthScore = random.nextInt(6) + 4;
-      suggestions = '建議均衡飲食，搭配適量運動。注意控制分量，避免過量攝取。';
-      portion = '一份';
-      category = '其他';
-    }
-
-    return {
-      'is_food': true,
-      'food_name': foodName,
-      'estimated_calories': calories.round(),
-      'protein_g': protein.toStringAsFixed(1),
-      'carbs_g': carbs.toStringAsFixed(1),
-      'fat_g': fat.toStringAsFixed(1),
-      'health_score': healthScore,
-      'suggestions': suggestions,
-      'estimated_portion': portion,
-      'meal_type': mealType,
-      'category': category,
-    };
-  }
-
-  // 從分析結果新增飲食紀錄到 Firebase
   Future<void> _addMealFromAnalysis(
     Map<String, dynamic> result,
     String foodName,
@@ -831,7 +658,7 @@ class _DietScreenState extends State<DietScreen> {
             .doc(user.uid)
             .collection('diet_records')
             .add(recordData);
-        // 自動關閉對話框的邏輯現在在 _startListeningToDietRecords 中處理
+        // The snapshot listener updates data; dialogs are owned by their action.
       } else {
         // 用戶未登入，使用本地儲存
         _addToLocalMemory(result, foodName, mealType);
@@ -907,40 +734,7 @@ class _DietScreenState extends State<DietScreen> {
               onPressed: () => Navigator.pop(context),
               child: const Text('關閉'),
             ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
 
-                // 使用測試數據並手動新增
-                final testResult = _generateTestAnalysis(
-                  '測試食物',
-                  _selectedMealType,
-                );
-                try {
-                  await _addMealFromAnalysis(
-                    testResult,
-                    '測試食物',
-                    _selectedMealType,
-                  );
-
-                  // 顯示成功訊息
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('使用測試數據新增了 $_selectedMealType'),
-                        backgroundColor: Colors.green,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    _showErrorDialog(context, '使用測試數據也失敗: $e');
-                  }
-                }
-              },
-              child: const Text('使用測試數據'),
-            ),
           ],
         );
       },
@@ -1410,6 +1204,7 @@ class _DietScreenState extends State<DietScreen> {
   /// 執行圖片分析
   Future<void> _analyzeImage(File imageFile, String mealType) async {
 
+    if (!mounted) return;
     setState(() => _isAnalyzing = true);
 
     // 顯示分析中對話框（帶動畫效果）
@@ -1429,6 +1224,7 @@ class _DietScreenState extends State<DietScreen> {
         mealType,
       );
 
+      if (!mounted) return;
       // 解析回應
       final result = _parseAIResponse(response, '圖片食物', mealType);
 
@@ -1458,6 +1254,7 @@ class _DietScreenState extends State<DietScreen> {
         _showImageAnalysisResult(imageFile, result, mealType);
       }
     } catch (e) {
+      if (!mounted) return;
 
       // 關閉分析中對話框
       if (mounted) {
@@ -1665,6 +1462,7 @@ class _DietScreenState extends State<DietScreen> {
                 Navigator.pop(dialogContext);
                 try {
                   await _addMealFromAnalysis(result, foodName, mealType);
+                  if (!mounted) return;
                   setState(() => _isAnalyzing = false);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1675,6 +1473,7 @@ class _DietScreenState extends State<DietScreen> {
                     );
                   }
                 } catch (e) {
+                  if (!mounted) return;
                   setState(() => _isAnalyzing = false);
                   if (mounted) {
                     _showErrorDialog(context, '儲存失敗: $e');
@@ -1909,6 +1708,7 @@ class _DietScreenState extends State<DietScreen> {
                     );
                   }
                 } catch (e) {
+                  if (!mounted) return;
                   setState(() => _isAnalyzing = false);
                   if (mounted) {
                     _showErrorDialog(context, '儲存失敗: $e');
@@ -2102,6 +1902,9 @@ class _DietScreenState extends State<DietScreen> {
             // 餐別選擇器
             _buildMealTypeSelector(),
 
+            if (_dataError != null) Padding(padding: const EdgeInsets.all(12),
+              child: Column(children: [Text(_dataError!),
+                TextButton(onPressed: _startListeningToDietRecords, child: const Text('重試'))])),
             // 飲食紀錄列表
             if (_isLoading && _dietRecords.isEmpty)
               Expanded(

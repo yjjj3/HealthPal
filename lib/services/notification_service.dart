@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/initialization_gate.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -25,6 +28,15 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
+  final InitializationGate _initialization = InitializationGate();
+  StreamSubscription<RemoteMessage>? _foregroundSubscription;
+  StreamSubscription<String>? _tokenSubscription;
+  StreamSubscription<User?>? _authSubscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _settingsSubscription;
+  Completer<void>? _settingsReady;
+  int _accountGeneration = 0;
+  Future<void> _accountReady = Future.value();
+
   // 通知頻道 ID
   static const String _medicationChannelId = 'medication_reminders';
   static const String _healthChannelId = 'health_reminders';
@@ -51,18 +63,47 @@ class NotificationService {
   // ============================================================
   // 初始化
   // ============================================================
-  Future<void> initialize() async {
-    debugPrint('🔔 開始初始化通知服務...');
-    
-    // Web 平台特殊處理
-    if (isWeb) {
-      debugPrint('🔔 偵測到 Web 平台，進行特殊初始化');
-      await _initializeForWeb();
-      return;
-    }
+  Future<void> initialize() => _initialization.run(() async {
+    if (isWeb) await _initializeForWeb();
+    else await _initializeForMobile();
+    _authSubscription ??= FirebaseAuth.instance.authStateChanges().listen((user) {
+      final generation = ++_accountGeneration;
+      if (_settingsReady?.isCompleted == false) _settingsReady!.complete();
+      _settingsSubscription?.cancel();
+      _settingsSubscription = null;
+      _notificationSettings = {'all': true, 'activity': true, 'health': true, 'family': false, 'updates': true};
+      _missedDoseSettings = {'missedDoseEnabled': true, 'missedDoseInterval': 30, 'missedDoseMaxReminders': 2};
+      _accountReady = _accountReady.then((_) => _bindNotificationAccount(user, generation)).catchError((Object error) {
+        _notificationSettings['all'] = false;
+        debugPrint('通知帳號同步失敗: $error');
+      });
+    });
+  });
 
-    // 移動設備初始化
-    await _initializeForMobile();
+  Future<void> _bindNotificationAccount(User? user, int generation) async {
+    if (generation != _accountGeneration) return;
+    // Preserve the same account's scheduled reminders across app restarts.
+    final prefs = await SharedPreferences.getInstance();
+    final previousUid = prefs.getString('notification_account_uid');
+    if (!isWeb && (user == null || previousUid != user.uid)) await _localNotifications.cancelAll();
+    if (generation != _accountGeneration) return;
+    if (user == null) { await prefs.remove('notification_account_uid'); return; }
+    await prefs.setString('notification_account_uid', user.uid);
+    if (generation != _accountGeneration) return;
+    final settingsReady = Completer<void>();
+    _settingsReady = settingsReady;
+    _settingsSubscription = FirebaseFirestore.instance.collection('users').doc(user.uid)
+      .collection('settings').doc('notifications').snapshots().listen((snapshot) {
+        if (generation == _accountGeneration) _applyNotificationSettings(snapshot.data());
+        if (!settingsReady.isCompleted) settingsReady.complete();
+      }, onError: (Object error) {
+        if (generation == _accountGeneration) _notificationSettings['all'] = false;
+        if (!settingsReady.isCompleted) settingsReady.complete();
+        debugPrint('通知設定監聽失敗: $error');
+      }, onDone: () { if (!settingsReady.isCompleted) settingsReady.complete(); });
+    await settingsReady.future;
+    if (generation != _accountGeneration) return;
+    await _getAndSaveFCMToken();
   }
 
   // Web 平台初始化
@@ -95,6 +136,7 @@ class NotificationService {
       debugPrint('✅ Web 版 NotificationService 初始化完成');
     } catch (e) {
       debugPrint('❌ Web 初始化失敗: $e');
+      rethrow;
     }
   }
 
@@ -125,6 +167,7 @@ class NotificationService {
       debugPrint('✅ 移動版 NotificationService 初始化完成');
     } catch (e) {
       debugPrint('❌ 移動版初始化失敗: $e');
+      rethrow;
     }
   }
 
@@ -292,7 +335,7 @@ class NotificationService {
   // 設定前景訊息處理
   // ============================================================
   void _setupForegroundMessageHandler() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    _foregroundSubscription ??= FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('🔔 前景收到通知: ${message.notification?.title}');
 
       final notification = message.notification;
@@ -316,27 +359,23 @@ class NotificationService {
   // 取得並儲存 FCM Token
   // ============================================================
   Future<void> _getAndSaveFCMToken() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    _tokenSubscription ??= _fcm.onTokenRefresh.listen((newToken) {
+      _saveFCMTokenToFirestore(newToken);
+    }, onError: (Object error) { debugPrint('FCM Token 監聽失敗: $error'); });
     try {
       final token = await _fcm.getToken();
-      debugPrint('🔔 FCM Token: $token');
-
-      if (token != null) {
-        await _saveFCMTokenToFirestore(token);
+      if (token != null && uid != null && uid == FirebaseAuth.instance.currentUser?.uid) {
+        await _saveFCMTokenToFirestore(token, expectedUid: uid);
       }
-
-      // 監聽 Token 更新
-      _fcm.onTokenRefresh.listen((newToken) {
-        debugPrint('🔄 FCM Token 更新: $newToken');
-        _saveFCMTokenToFirestore(newToken);
-      });
     } catch (e) {
       debugPrint('❌ 取得 FCM Token 失敗: $e');
     }
   }
 
-  Future<void> _saveFCMTokenToFirestore(String token) async {
+  Future<void> _saveFCMTokenToFirestore(String token, {String? expectedUid}) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || (expectedUid != null && expectedUid != user.uid)) return;
 
     try {
       String platform;
@@ -365,45 +404,26 @@ class NotificationService {
   // ============================================================
   // 載入用戶通知設定
   // ============================================================
+  void _applyNotificationSettings(Map<String, dynamic>? data) {
+    data ??= {};
+    _notificationSettings = {
+      'all': data['all'] ?? true, 'activity': data['activity'] ?? true,
+      'health': data['health'] ?? true, 'family': data['family'] ?? false,
+      'updates': data['updates'] ?? true,
+    };
+    _missedDoseSettings = {
+      'missedDoseEnabled': data['missedDoseEnabled'] ?? true,
+      'missedDoseInterval': data['missedDoseInterval'] ?? 30,
+      'missedDoseMaxReminders': data['missedDoseMaxReminders'] ?? 2,
+    };
+  }
+
   Future<void> loadUserNotificationSettings() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('settings')
-          .doc('notifications')
-          .get();
-
-      if (doc.exists) {
-        final data = doc.data()!;
-        
-        // 載入一般通知設定
-        _notificationSettings = {
-          'all': data['all'] ?? true,
-          'activity': data['activity'] ?? true,
-          'health': data['health'] ?? true,
-          'family': data['family'] ?? false,
-          'updates': data['updates'] ?? true,
-        };
-        
-        // 載入漏吃提醒設定
-        _missedDoseSettings = {
-          'missedDoseEnabled': data['missedDoseEnabled'] ?? true,
-          'missedDoseInterval': data['missedDoseInterval'] ?? 30,
-          'missedDoseMaxReminders': data['missedDoseMaxReminders'] ?? 2,
-        };
-        
-        debugPrint('✅ 用戶通知設定已載入: $_notificationSettings');
-        debugPrint('✅ 漏吃提醒設定已載入: $_missedDoseSettings');
-      } else {
-        debugPrint('ℹ️ 用戶通知設定不存在，使用預設值');
-      }
-    } catch (e) {
-      debugPrint('❌ 載入通知設定失敗: $e');
-    }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) { _applyNotificationSettings(null); return; }
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid)
+      .collection('settings').doc('notifications').get();
+    if (FirebaseAuth.instance.currentUser?.uid == uid) _applyNotificationSettings(doc.data());
   }
 
   // ============================================================
@@ -457,6 +477,10 @@ class NotificationService {
     String? payload,
     String channelId = _generalChannelId,
   }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final generation = _accountGeneration;
+    await _accountReady;
+    if (uid == null || uid != FirebaseAuth.instance.currentUser?.uid || generation != _accountGeneration) return;
     if (isWeb) {
       debugPrint('🌐 Web 平台不支援本地通知: $title - $body');
       return;
@@ -520,6 +544,10 @@ class NotificationService {
     required DateTime scheduledTime,
     required String medicationId,
   }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final generation = _accountGeneration;
+    await _accountReady;
+    if (uid == null || uid != FirebaseAuth.instance.currentUser?.uid || generation != _accountGeneration) return;
     if (isWeb) {
       debugPrint('🌐 Web 平台不支援排程通知');
       return;
@@ -583,13 +611,17 @@ class NotificationService {
     required String medicationId,
     int reminderCount = 1,
   }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final generation = _accountGeneration;
+    await _accountReady;
+    if (uid == null || uid != FirebaseAuth.instance.currentUser?.uid || generation != _accountGeneration) return;
     if (isWeb) {
       debugPrint('🌐 Web 平台不支援排程通知');
       return;
     }
 
     // 檢查漏吃提醒是否啟用
-    if (!_missedDoseSettings['missedDoseEnabled']) {
+    if (!isNotificationEnabled('health') || !_missedDoseSettings['missedDoseEnabled']) {
       debugPrint('⚠️ 漏吃提醒已關閉，跳過排程');
       return;
     }
@@ -649,6 +681,10 @@ class NotificationService {
     required String type,
     required DateTime scheduledTime,
   }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final generation = _accountGeneration;
+    await _accountReady;
+    if (uid == null || uid != FirebaseAuth.instance.currentUser?.uid || generation != _accountGeneration) return;
     if (isWeb) {
       debugPrint('🌐 Web 平台不支援排程通知');
       return;

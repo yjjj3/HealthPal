@@ -58,6 +58,7 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           .doc(currentUser.uid)
           .get();
 
+      if (!mounted || currentUser.uid != _auth.currentUser?.uid) return;
       if (!familyMemberDoc.exists) {
         print('❌ 無法找到家庭成員關係');
         setState(() {
@@ -79,6 +80,7 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           .doc(widget.userId)
           .get();
 
+      if (!mounted || currentUser.uid != _auth.currentUser?.uid) return;
       if (userDoc.exists) {
         print('✅ 成功載入用戶資料');
         final userData = userDoc.data();
@@ -95,6 +97,7 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = '載入資料時發生錯誤: $e';
         _isLoading = false;
@@ -399,6 +402,7 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           .doc(widget.userId)
           .collection('health_records')
           .where('category', isEqualTo: categoryFilter)
+          .orderBy('record_time', descending: true).limit(1)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {

@@ -3,7 +3,7 @@ import {before, after, beforeEach, test} from 'node:test';
 import assert from 'node:assert/strict';
 import {initializeTestEnvironment, assertSucceeds, assertFails} from '@firebase/rules-unit-testing';
 import {doc, collection, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
-  writeBatch, runTransaction, query, where, Timestamp, serverTimestamp, increment} from 'firebase/firestore';
+  writeBatch, runTransaction, query, where, orderBy, limit, Timestamp, serverTimestamp, increment} from 'firebase/firestore';
 
 let env;
 before(async () => {
@@ -125,4 +125,32 @@ test('chat transaction writes message and unread atomically; repeated ID is a no
   await assertFails(send('forged', 'bob'));
   assert.equal((await getDoc(doc(alice, 'chats/alice_bob/messages/forged'))).exists(), false);
   await assertFails(updateDoc(doc(alice, 'chats/alice_bob'), {members: ['alice', 'mallory']}));
+});
+
+
+test('bounded queries preserve owner and category-based family authorization', async () => {
+  await acceptedFamily();
+  await seed({
+    'users/alice/health_records/sugar': {category: '血糖', value: '100 mg/dL', record_time: Timestamp.now()},
+    'users/alice/health_records/pressure': {category: '血壓', value: '120/80 mmHg', record_time: Timestamp.now()},
+    'chats/alice_bob': {members: ['alice', 'bob'], lastTime: Timestamp.now()},
+    'chats/alice_bob/messages/one': {senderId: 'alice', text: 'hello', timestamp: Timestamp.now()},
+  });
+  const bob = dbFor('bob');
+  const health = collection(bob, 'users/alice/health_records');
+  const sugar = await assertSucceeds(getDocs(query(health,
+    where('category', '==', '血糖'), orderBy('record_time', 'desc'), limit(1))));
+  assert.equal(sugar.docs.length, 1);
+  await assertFails(getDocs(query(health, orderBy('record_time', 'desc'), limit(20))));
+  const own = await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'users/alice/health_records'),
+    orderBy('record_time', 'desc'), limit(50))));
+  assert.equal(own.docs.length, 2);
+  const chats = await assertSucceeds(getDocs(query(collection(bob, 'chats'),
+    where('members', 'array-contains', 'bob'), orderBy('lastTime', 'desc'), limit(50))));
+  assert.equal(chats.docs.length, 1);
+  const messages = await assertSucceeds(getDocs(query(collection(bob, 'chats/alice_bob/messages'),
+    orderBy('timestamp', 'desc'), limit(50))));
+  assert.equal(messages.docs.length, 1);
+  await assertFails(getDocs(query(collection(dbFor('mallory'), 'chats/alice_bob/messages'),
+    orderBy('timestamp', 'desc'), limit(50))));
 });

@@ -1,3 +1,5 @@
+import '../utils/data_error_message.dart';
+import '../widgets/data_error_view.dart';
 import '../services/family_relationship_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -9,8 +11,6 @@ import '../models/record_data.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_dimensions.dart';
-import '../theme/app_text_styles.dart';
 import 'add_member_screen.dart'; 
 
 // --- 使用者資料模型 ---
@@ -265,6 +265,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   StreamSubscription<QuerySnapshot>? _invitationsSubscription;
   StreamSubscription<DocumentSnapshot>? _userDataSubscription;
   StreamSubscription<QuerySnapshot>? _healthRecordsSubscription;
+  StreamSubscription<QuerySnapshot>? _medicineSubscription;
+  int _listenerGeneration = 0;
+  final Set<String> _readySources = {};
+  final Map<String, String> _dataErrors = {};
+  String? _invitationTarget;
 
     // 邀請通知卡片
 Widget _buildInvitationNotification() {
@@ -380,183 +385,120 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
     ),
   );
 }
-    Future<void> _loadPendingInvitations() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      // 獲取使用者的 email 和手機號碼
-      final userEmail = user.email?.toLowerCase().trim();
-      String? userPhone;
-
-      // 從 Firestore 讀取使用者的手機號碼
-      if (_userData != null && _userData!.email.isNotEmpty) {
-        // 如果已經載入了使用者資料，就使用它
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-        if (userDoc.exists) {
-          userPhone = userDoc.data()?['phoneNumber'] as String?;
-        }
-      }
-
-      // 查詢所有符合條件的邀請（email 或手機號碼）
-      final invitationsQuery = await FirebaseFirestore.instance
-          .collection('family_invites')
-          .where('status', isEqualTo: 'pending')
-          .get();
-
-      // 過濾出匹配當前使用者 email 或手機號碼的邀請
-      final invitations = invitationsQuery.docs.where((doc) {
-        final data = doc.data();
-        final emailOrPhone = ((data['invitedToEmail'] ?? data['emailOrPhone']) as String?)?.toLowerCase().trim();
-
-        // 匹配 email 或手機號碼
-        return emailOrPhone == userEmail ||
-               (userPhone != null && emailOrPhone == userPhone.toLowerCase().trim());
-      }).map((doc) {
-        final data = doc.data();
-        return {
-          'id': doc.id,
-          'inviterName': data['inviterName'] ?? data['name'] ?? '未知用戶',
-          'relation': data['relation'] ?? '家人',
-          'invitedAt': data['invitedAt'] != null
-              ? (data['invitedAt'] is Timestamp ? (data['invitedAt'] as Timestamp).toDate() : DateTime.fromMillisecondsSinceEpoch(data['invitedAt']))
-              : DateTime.now(),
-          'sharedData': data['sharedData'] ?? {},
-          'invitedBy': data['invitedBy'],
-        };
-      }).toList();
-
-      if (mounted) {
-        setState(() {
-          _pendingInvitations = invitations;
-          _hasPendingInvitations = invitations.isNotEmpty;
-        });
-      }
-    } catch (e) {
-      debugPrint('載入邀請失敗: $e');
-    }
-  }
-
   @override
   void initState() {
     super.initState();
     _loadAllData();
-    _loadPendingInvitations();
-    _setupInvitationsListener();
-    _setupUserDataListener(); // 監聽使用者資料變更
-    _setupHealthRecordsListener(); // 監聽健康記錄變更
   }
 
   @override
   void dispose() {
-    // 取消所有即時監聽，避免每次切換分頁重建這個畫面時都多洩漏一組 Firestore 監聽器
+    _listenerGeneration++;
     _invitationsSubscription?.cancel();
     _userDataSubscription?.cancel();
     _healthRecordsSubscription?.cancel();
+    _medicineSubscription?.cancel();
     super.dispose();
   }
 
-  // 即時監聽邀請狀態
-  void _setupInvitationsListener() async {
+  void _sourceReady(String source, [Object? error]) {
+    if (!mounted) return;
+    setState(() {
+      _readySources.add(source);
+      if (error == null) {
+        _dataErrors.remove(source);
+      } else {
+        _dataErrors[source] = dataErrorMessage(error);
+      }
+      _isLoading = !_readySources.containsAll(['個人資料', '健康紀錄', '用藥']);
+    });
+  }
+
+  Future<void> _loadAllData() async {
+    final generation = ++_listenerGeneration;
+    final old = [_userDataSubscription, _healthRecordsSubscription,
+      _medicineSubscription, _invitationsSubscription];
+    _userDataSubscription = null;
+    _healthRecordsSubscription = null;
+    _medicineSubscription = null;
+    _invitationsSubscription = null;
+    _invitationTarget = null;
+    await Future.wait(old.whereType<StreamSubscription>().map((s) => s.cancel()));
+    if (!mounted || generation != _listenerGeneration) return;
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    // 獲取使用者的 email 和手機號碼
-    final userEmail = user.email?.toLowerCase().trim();
-    String? userPhone;
-
-    // 從 Firestore 讀取使用者的手機號碼
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-    if (userDoc.exists) {
-      userPhone = userDoc.data()?['phoneNumber'] as String?;
+    if (user == null) {
+      setState(() { _isLoading = false; _userData = null;
+        _healthRecords = []; _todayMedications = []; _pendingInvitations = []; });
+      return;
     }
+    setState(() { _isLoading = true; _readySources.clear(); _dataErrors.clear(); });
+    final owner = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    bool active() => mounted && generation == _listenerGeneration &&
+      FirebaseAuth.instance.currentUser?.uid == user.uid;
+    _userDataSubscription = owner.snapshots().listen((snapshot) {
+      if (!active()) return;
+      try {
+        setState(() { _userData = snapshot.exists ? UserModel.fromFirestore(snapshot) : null; });
+        _setupInvitationsListener(user.email, snapshot.data()?['phoneNumber'] as String?, generation);
+        _sourceReady('個人資料');
+      } catch (error) { _sourceReady('個人資料', error); }
+    }, onError: (Object error) { if (active()) _sourceReady('個人資料', error); });
+    _healthRecordsSubscription = owner.collection('health_records')
+      .where('record_time', isGreaterThanOrEqualTo:
+        Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 7))))
+      .orderBy('record_time', descending: true).snapshots().listen((snapshot) {
+        if (!active()) return;
+        try {
+          final records = snapshot.docs.map((doc) =>
+            HealthRecord.fromRecordData(RecordData.fromFirestore(doc)))
+              .where((record) => record.value > 0).toList();
+          setState(() { _healthRecords = records; _calculateHealthStats(); });
+          _sourceReady('健康紀錄');
+        } catch (error) { _sourceReady('健康紀錄', error); }
+      }, onError: (Object error) { if (active()) _sourceReady('健康紀錄', error); });
+    _medicineSubscription = owner.collection('medicine').snapshots().listen((snapshot) {
+      if (!active()) return;
+      try { _applyMedicationSnapshot(snapshot); _sourceReady('用藥'); }
+      catch (error) { _sourceReady('用藥', error); }
+    }, onError: (Object error) { if (active()) _sourceReady('用藥', error); });
+  }
 
-    // 監聽所有 pending 邀請，然後在客戶端過濾
-    _invitationsSubscription = FirebaseFirestore.instance
-        .collection('family_invites')
-        .where('status', isEqualTo: 'pending')
-        .snapshots()
-        .listen((snapshot) {
-      if (mounted) {
-        // 過濾出匹配當前使用者的邀請
-        final filteredInvitations = snapshot.docs.where((doc) {
+  Future<void> _setupInvitationsListener(String? email, String? phone, int generation) async {
+    final targets = [if (email != null && email.isNotEmpty) email.toLowerCase().trim(),
+      if (phone != null && phone.isNotEmpty) phone.trim()];
+    final target = targets.join('|');
+    if (_invitationTarget == target) return;
+    _invitationTarget = target;
+    final previous = _invitationsSubscription;
+    _invitationsSubscription = null;
+    await previous?.cancel();
+    if (!mounted || generation != _listenerGeneration || target != _invitationTarget) return;
+    if (targets.isEmpty) {
+      setState(() { _pendingInvitations = []; _hasPendingInvitations = false; });
+      return;
+    }
+    final filters = [if (email != null && email.isNotEmpty)
+      Filter('invitedToEmail', isEqualTo: email.toLowerCase().trim()),
+      Filter('emailOrPhone', whereIn: targets)];
+    final filter = filters.length == 1 ? filters.first : Filter.or(filters[0], filters[1]);
+    _invitationsSubscription = FirebaseFirestore.instance.collection('family_invites')
+      .where('status', isEqualTo: 'pending').where(filter).snapshots().listen((snapshot) {
+        if (!mounted || generation != _listenerGeneration || target != _invitationTarget) return;
+        final invitations = snapshot.docs.map((doc) {
           final data = doc.data();
-          final emailOrPhone = ((data['invitedToEmail'] ?? data['emailOrPhone']) as String?)?.toLowerCase().trim();
-
-          // 匹配 email 或手機號碼
-          return emailOrPhone == userEmail ||
-                 (userPhone != null && emailOrPhone == userPhone.toLowerCase().trim());
-        }).map((doc) {
-          final data = doc.data();
-          return {
-            'id': doc.id,
-            'inviterName': data['inviterName'] ?? data['name'] ?? '未知用戶',
+          final date = data['invitedAt'] ?? data['createdAt'];
+          return <String, dynamic>{'id': doc.id,
+            'inviterName': data['inviterName'] ?? data['name'] ?? '家人',
             'relation': data['relation'] ?? '家人',
-            'invitedAt': data['invitedAt'] != null
-                ? (data['invitedAt'] is Timestamp ? (data['invitedAt'] as Timestamp).toDate() : DateTime.fromMillisecondsSinceEpoch(data['invitedAt']))
-                : DateTime.now(),
-            'sharedData': data['sharedData'] ?? {},
-          };
+            'invitedAt': date is Timestamp ? date.toDate() :
+              date is int ? DateTime.fromMillisecondsSinceEpoch(date) : DateTime.now(),
+            'sharedData': data['sharedData'] ?? {}, 'invitedBy': data['invitedBy']};
         }).toList();
-
-        setState(() {
-          _pendingInvitations = filteredInvitations;
-          _hasPendingInvitations = filteredInvitations.isNotEmpty;
-        });
-      }
-    });
-  }
-
-  // 新增：即時監聯使用者資料變更
-  void _setupUserDataListener() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    _userDataSubscription = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .snapshots()
-        .listen((snapshot) {
-      if (mounted && snapshot.exists) {
-        setState(() {
-          _userData = UserModel.fromFirestore(snapshot);
-          debugPrint('使用者資料已更新: 慢性病=${_userData?.chronicDiseases}');
-        });
-      }
-    });
-  }
-
-  // 新增：即時監聽健康記錄變更
-  void _setupHealthRecordsListener() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    _healthRecordsSubscription = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('health_records')
-        .snapshots()
-        .listen((snapshot) {
-      if (mounted) {
-        debugPrint('🔄 健康記錄有更新，重新載入數據...');
-        _loadHealthRecords().then((_) {
-          // _calculateHealthStats() 只是同步計算、寫入 _healthStats map，
-          // 本身不會觸發畫面重建；沒有包在 setState 裡的話，
-          // 主頁卡片（血壓/血糖/體重…）就不會反映剛剛的即時更新。
-          if (mounted) {
-            setState(() {
-              _calculateHealthStats();
-            });
-          }
-        });
-      }
-    });
+        setState(() { _pendingInvitations = invitations;
+          _hasPendingInvitations = invitations.isNotEmpty; _dataErrors.remove('邀請'); });
+      }, onError: (Object error) {
+        if (mounted && generation == _listenerGeneration && target == _invitationTarget) _sourceReady('邀請', error);
+      });
   }
 
 // 修改：處理邀請回應
@@ -571,6 +513,7 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
           .doc(invitationId)
           .get();
 
+      if (!mounted) return;
       if (!invitationDoc.exists) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('邀請不存在或已被取消')),
@@ -599,9 +542,10 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
       }
 
       // 重新載入邀請列表
-      _loadPendingInvitations();
+      // The invitation listener updates the list after the transaction.
       
     } catch (e) {
+      if (!mounted) return;
       debugPrint('處理邀請失敗: $e');
       
       String errorMessage = '操作失敗，請重試';
@@ -673,7 +617,7 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
       debugPrint('✅ 已標記用藥完成：${med.medicineName} - 第 ${med.timeIndex! + 1} 次');
 
       // 重新載入今日用藥
-      await _loadTodayMedications();
+      // The medication listener updates today's list after the transaction.
 
       // 顯示完成提示
       if (mounted) {
@@ -701,297 +645,17 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
     }
   }
 
-  Future<void> _loadAllData() async {
-    bool hasError = false;
-    try {
-      await _loadUserData();
-      await _loadHealthRecords();
-      await _loadMedications();
-      await _loadTodayMedications();
-      if (mounted) {
-        setState(() {
-          _calculateHealthStats();
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading data: $e');
-      hasError = true;
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        // 只在完全載入失敗時顯示錯誤提示
-        if (hasError && _userData == null && _healthRecords.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('載入資料時發生錯誤，請檢查網路連線'),
-              backgroundColor: AppColors.error,
-              action: SnackBarAction(
-                label: '重試',
-                textColor: AppColors.surface,
-                onPressed: () {
-                  setState(() => _isLoading = true);
-                  _loadAllData();
-                },
-              ),
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final db = FirebaseFirestore.instance;
-      final auth = FirebaseAuth.instance;
-      final userId = auth.currentUser?.uid;
-
-      if (userId == null) {
-        debugPrint('User not logged in');
-        return;
-      }
-
-      debugPrint('Loading user data for: $userId');
-
-      // 根據您的 Firebase 結構，直接讀取 users 集合
-      final docRef = db.collection('users').doc(userId);
-      final docSnapshot = await docRef.get();
-
-      if (docSnapshot.exists) {
-        debugPrint('User data found: ${docSnapshot.data()}');
-        if (mounted) {
-          setState(() {
-            _userData = UserModel.fromFirestore(docSnapshot);
-          });
-        }
-      } else {
-        debugPrint('No user data found at users/$userId');
-        // 嘗試其他可能的路徑
-        await _tryAlternativePaths(userId);
-      }
-    } catch (e) {
-      debugPrint('Error loading user data: $e');
-    }
-  }
-
-  Future<void> _tryAlternativePaths(String userId) async {
-    final db = FirebaseFirestore.instance;
-    
-    // 嘗試從 user_settings 讀取
-    try {
-      final settingsRef = db
-          .collection('users')
-          .doc(userId)
-          .collection('user_settings')
-          .doc(userId);
-      final settingsSnapshot = await settingsRef.get();
-      
-      if (settingsSnapshot.exists) {
-        debugPrint('User data found in user_settings');
-        if (mounted) {
-          setState(() {
-            _userData = UserModel.fromFirestore(settingsSnapshot);
-          });
-        }
-        return;
-      }
-    } catch (e) {
-      debugPrint('Error reading user_settings: $e');
-    }
-  }
-
-  Future<void> _loadHealthRecords() async {
-    try {
-      final db = FirebaseFirestore.instance;
-      final auth = FirebaseAuth.instance;
-      final userId = auth.currentUser?.uid;
-
-      if (userId == null) {
-        debugPrint('❌ 用戶未登入');
-        return;
-      }
-
-      debugPrint('🔍 開始讀取健康記錄...');
-      debugPrint('🔍 用戶ID: $userId');
-      debugPrint('🔍 正在從 users/$userId/health_records 讀取數據...');
-
-      // 先嘗試不排序讀取（避免索引問題）
-      QuerySnapshot healthQuery;
-      try {
-        healthQuery = await db
-            .collection('users')
-            .doc(userId)
-            .collection('health_records')
-            .get();
-      } catch (e) {
-        debugPrint('❌ 讀取健康記錄失敗: $e');
-        return;
-      }
-
-      debugPrint('📊 從資料庫收到 ${healthQuery.docs.length} 筆記錄');
-
-      if (healthQuery.docs.isEmpty) {
-        debugPrint('⚠️ Firebase 中沒有任何健康記錄！');
-        debugPrint('   請確認是否已經新增過健康記錄數據');
-      }
-
-      final records = <HealthRecord>[];
-      int successCount = 0;
-      int errorCount = 0;
-
-      for (final doc in healthQuery.docs) {
-        try {
-          final data = doc.data();
-          debugPrint('🔍 處理記錄 ${doc.id}');
-          debugPrint('   原始數據: $data');
-
-          // 使用 RecordData 解析
-          final recordData = RecordData.fromFirestore(doc);
-          debugPrint('   解析後: category=${recordData.category}, value=${recordData.value}');
-
-          // 轉換為 Dashboard 使用的 HealthRecord 格式
-          final healthRecord = HealthRecord.fromRecordData(recordData);
-          debugPrint('   健康記錄: type=${healthRecord.type}, value=${healthRecord.value}');
-
-          // 只添加有有效數據的記錄
-          if (healthRecord.value > 0) {
-            records.add(healthRecord);
-            successCount++;
-            debugPrint('✅ 成功轉換記錄: ${recordData.category} - ${healthRecord.value}');
-          } else {
-            debugPrint('⚠️ 記錄無有效數值，跳過: ${recordData.category}');
-            errorCount++;
-          }
-
-        } catch (e, stackTrace) {
-          debugPrint('❌ 解析記錄 ${doc.id} 失敗: $e');
-          debugPrint('   堆疊追蹤: $stackTrace');
-          errorCount++;
-        }
-      }
-
-      // 按時間排序（客戶端排序）
-      records.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-      debugPrint('📈 轉換結果: 成功 $successCount 筆, 失敗 $errorCount 筆, 總共 ${records.length} 筆有效記錄');
-
-      if (mounted) {
-        setState(() {
-          _healthRecords = records;
-        });
-      }
-
-      // 如果主要路徑沒有數據，嘗試其他路徑
-      if (records.isEmpty) {
-        debugPrint('⚠️ 主要路徑無數據，嘗試其他路徑...');
-        await _loadFamilyHealthRecords();
-      }
-    } catch (e) {
-      debugPrint('Error loading health records: $e');
-      // 如果主要路徑失敗，嘗試 family_members 路徑
-      await _loadFamilyHealthRecords();
-    }
-  }
-
-  Future<void> _loadFamilyHealthRecords() async {
-    try {
-      final db = FirebaseFirestore.instance;
-      final auth = FirebaseAuth.instance;
-      final userId = auth.currentUser?.uid;
-
-      if (userId == null) return;
-
-      debugPrint('🔍 嘗試從 family_members 讀取健康記錄...');
-
-      // 嘗試從 family_members 讀取健康記錄
-      final familyQuery = await db
-          .collection('family_members')
-          .doc(userId)
-          .collection('health_records')
-          .orderBy('timestamp', descending: true)
-          .limit(100)
-          .get();
-
-      final records = familyQuery.docs
-          .map((doc) => HealthRecord.fromFirestore(doc.data()))
-          .toList();
-
-      debugPrint('Loaded ${records.length} family health records');
-
-      if (mounted) {
-        setState(() {
-          _healthRecords.addAll(records);
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading family health records: $e');
-    }
-  }
-
-  Future<void> _loadMedications() async {
-    try {
-      final db = FirebaseFirestore.instance;
-      final auth = FirebaseAuth.instance;
-      final userId = auth.currentUser?.uid;
-
-      if (userId == null) return;
-
-      // 讀取 medicine 集合（基本藥物資訊）
-      final medsQuery = await db
-          .collection('users')
-          .doc(userId)
-          .collection('medicine')
-          .get();
-
-      final medications = <MedicationRecord>[];
-      
-      for (final doc in medsQuery.docs) {
-        try {
-          final data = doc.data();
-          debugPrint('💊 處理藥物資料: $data');
-          
-          // 安全地創建 MedicationRecord
-          final medication = MedicationRecord.fromFirestore(data);
-          medications.add(medication);
-        } catch (e) {
-          debugPrint('❌ 處理藥物資料失敗: $e');
-        }
-      }
-
-      debugPrint('Loaded ${medications.length} medications');
-    } catch (e) {
-      debugPrint('Error loading medications: $e');
-    }
-  }
-
-  // 載入今日用藥（為每個服藥時間創建獨立記錄）
-  Future<void> _loadTodayMedications() async {
-    try {
-      final db = FirebaseFirestore.instance;
-      final auth = FirebaseAuth.instance;
-      final userId = auth.currentUser?.uid;
-
-      if (userId == null) return;
-
-      // 讀取 medicine 集合（直接從藥物資訊獲取今日用藥狀態）
-      final medsQuery = await db
-          .collection('users')
-          .doc(userId)
-          .collection('medicine')
-          .get();
-
+  void _applyMedicationSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) {
       List<MedicationRecord> todayMeds = [];
 
-      for (final doc in medsQuery.docs) {
+      for (final doc in snapshot.docs) {
         try {
           final data = doc.data();
           final medicineId = doc.id;
 
           // 解析藥物資料
           final medicineName = data['name'] as String? ?? '未命名藥物';
-          final dosage = data['dosage'] as String? ?? '';
+          final dosage = data['dosage']?.toString() ?? '';
           final frequency = data['frequency'] as String? ?? '每日一次';
 
           // 獲取服藥時間列表和狀態列表
@@ -1019,41 +683,15 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
             ));
           }
 
-          debugPrint('💊 載入藥物: $medicineName，共 ${timesOfDayList.length} 次服藥');
+
         } catch (e) {
-          debugPrint('❌ 處理今日用藥記錄失敗: $e');
+          rethrow;
         }
       }
 
-      // 按照時間排序
-      todayMeds.sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
-
-      debugPrint('✅ 載入了 ${todayMeds.length} 筆今日用藥記錄');
-
-      if (mounted) {
-        setState(() {
-          _todayMedications = todayMeds;
-        });
-      }
-    } catch (e) {
-      debugPrint('❌ 載入今日用藥失敗: $e');
-      if (mounted) {
-        setState(() {
-          _todayMedications = [];
-        });
-        // 用藥資料對用戶很重要，顯示錯誤提示
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('載入用藥記錄失敗'),
-            backgroundColor: AppColors.warning,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
+    todayMeds.sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+    setState(() => _todayMedications = todayMeds);
   }
-
-  // 已移除 _generateTodayMedicationsFromBase 函數，現在直接從 medicine 集合讀取
 
   void _calculateHealthStats() {
     final now = DateTime.now();
@@ -1691,6 +1329,10 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
 
   @override
   Widget build(BuildContext context) {
+    if (_dataErrors.isNotEmpty) {
+      return DataErrorView(message: _dataErrors.entries
+        .map((entry) => '${entry.key}：${entry.value}').join('\n'), onRetry: _loadAllData);
+    }
     if (_isLoading) {
       return const Center(
         child: Padding(

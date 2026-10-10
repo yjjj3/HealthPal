@@ -1,3 +1,6 @@
+import '../services/live_query_window.dart';
+import '../utils/data_error_message.dart';
+import '../widgets/data_error_view.dart';
 import '../theme/app_colors.dart';
 import 'dart:async';
 
@@ -25,6 +28,8 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = true;
   bool _isSearching = false;
   StreamSubscription? _chatsSubscription;
+  LiveQueryWindow? _chatWindow;
+  String? _chatError;
 
   @override
   void initState() {
@@ -36,6 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _chatsSubscription?.cancel();
+    _chatWindow?.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -57,22 +63,17 @@ class _ChatScreenState extends State<ChatScreen> {
     // 取消舊訂閱
     _chatsSubscription?.cancel();
 
-    // 建立新訂閱
-    _chatsSubscription = _firestore
-        .collection('chats')
-        .where('members', arrayContains: user.uid)
-        .snapshots()
-        .listen(
-          (snapshot) {
-            _processChatsSnapshot(snapshot, user.uid);
-          },
-          onError: (error) {
-            print('❌ 監聽聊天失敗: $error');
-            if (mounted) {
-              setState(() => _isLoading = false);
-            }
-          },
-        );
+    _chatWindow?.dispose();
+    _chatWindow = LiveQueryWindow(_firestore.collection('chats')
+      .where('members', arrayContains: user.uid).orderBy('lastTime', descending: true));
+    _chatsSubscription = _chatWindow!.stream.listen((snapshot) {
+      if (!mounted || _auth.currentUser?.uid != user.uid) return;
+      _chatError = null;
+      try { _processChatsSnapshot(snapshot, user.uid); }
+      catch (error) { setState(() { _isLoading = false; _chatError = dataErrorMessage(error); }); }
+    }, onError: (Object error) {
+      if (mounted) setState(() { _isLoading = false; _chatError = dataErrorMessage(error); });
+    });
   }
 
   // 處理聊天快照
@@ -226,6 +227,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_chatError != null) return Scaffold(appBar: AppBar(title: const Text('聊天')),
+      body: DataErrorView(message: _chatError!, onRetry: _setupChatsStream));
     final user = _auth.currentUser;
 
     if (user == null) {
@@ -271,6 +274,8 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ),
         actions: [
+          TextButton(onPressed: _chatWindow?.hasMore == true ? () => _chatWindow?.loadMore() : null,
+            child: const Text('載入更多')),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, size: 22),
             color: Colors.black54,
@@ -305,7 +310,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: '搜尋',
+                          hintText: '搜尋已載入的聊天',
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(vertical: 8),

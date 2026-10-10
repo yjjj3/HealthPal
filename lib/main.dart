@@ -1,3 +1,4 @@
+import 'widgets/account_boundary.dart';
 // lib/main.dart
 
 import 'package:firebase_core/firebase_core.dart';
@@ -19,7 +20,6 @@ import 'screens/dashboard_screen.dart';
 import 'screens/insights_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/medication_screen.dart';
-import 'screens/profile_screen.dart';
 import 'screens/records_screen.dart';
 import 'screens/health_record_screen.dart';
 import 'screens/record_list_screen.dart';
@@ -73,7 +73,10 @@ class HealthManagementApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return AccountBoundary(
+      userIds: FirebaseAuth.instance.authStateChanges().map((user) => user?.uid),
+      initialUid: FirebaseAuth.instance.currentUser?.uid,
+      child: MaterialApp(
       title: 'HealthPal',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -261,7 +264,7 @@ class HealthManagementApp extends StatelessWidget {
         '/health-records': (context) => const HealthRecordScreen(),
         '/share-report': (context) => const ShareReportScreen(),
       },
-    );
+    ));
   }
 }
 
@@ -286,7 +289,7 @@ class AuthScreen extends StatelessWidget {
 
         // 已登入，顯示主畫面
         if (snapshot.hasData && snapshot.data != null) {
-          return const MainScreen();
+          return MainScreen(key: ValueKey(snapshot.data!.uid));
         }
 
         // 未登入，顯示登入畫面
@@ -326,7 +329,8 @@ class _MainScreenState extends State<MainScreen> {
     await _sessionTimeoutService.initialize(
       onSessionExpired: _handleSessionExpired,
     );
-    _sessionTimeoutService.onUserLoggedIn();
+    if (!mounted) return;
+    await _sessionTimeoutService.onUserLoggedIn();
   }
 
   void _handleSessionExpired() {

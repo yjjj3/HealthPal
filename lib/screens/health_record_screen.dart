@@ -1,3 +1,5 @@
+import '../utils/data_error_message.dart';
+import '../widgets/data_error_view.dart';
 import 'dart:async';
 import '../theme/app_colors.dart';
 // lib/screens/health_record_screen.dart
@@ -26,7 +28,11 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
   List<Map<String, dynamic>> _recentRecords = [];
   List<Map<String, dynamic>> _medicationRecords = [];
   bool _isLoading = true;
-  int _healthLoadGeneration = 0;
+  int _listenerGeneration = 0;
+  StreamSubscription<DocumentSnapshot>? _profileSubscription;
+  StreamSubscription<QuerySnapshot>? _medicineSubscription;
+  final Set<String> _readySources = {};
+  final Map<String, String> _dataErrors = {};
 
   // 即時監聽的訂閱，需在 dispose() 時取消，避免每次進出此頁都多洩漏一組監聽器
   StreamSubscription<QuerySnapshot>? _healthRecordsSubscription;
@@ -35,79 +41,62 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
   void initState() {
     super.initState();
     _loadUserData();
-    _setupHealthRecordsListener(); // 監聽健康記錄變更
   }
 
   @override
   void dispose() {
+    _listenerGeneration++;
     _healthRecordsSubscription?.cancel();
+    _profileSubscription?.cancel();
+    _medicineSubscription?.cancel();
     super.dispose();
   }
 
-  // 即時監聽健康記錄變更
-  void _setupHealthRecordsListener() {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
-
-    _healthRecordsSubscription = _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('health_records')
-        .snapshots()
-        .listen((snapshot) {
-      if (mounted) {
-        debugPrint('🔄 健康檔案頁面：健康記錄有更新，重新載入...');
-        _loadHealthRecords(uid);
-      }
+  void _sourceReady(String source, [Object? error]) {
+    if (!mounted) return;
+    setState(() {
+      _readySources.add(source);
+      if (error == null) _dataErrors.remove(source);
+      else _dataErrors[source] = dataErrorMessage(error);
+      _isLoading = !_readySources.containsAll(['個人資料', '健康紀錄', '用藥']);
     });
   }
 
   Future<void> _loadUserData() async {
-    try {
-      final uid = _auth.currentUser?.uid;
-      if (uid == null) return;
-
-      // 獲取用戶基本資料
-      final userDoc = await _firestore.collection('users').doc(uid).get();
-
-      if (!mounted) return;
-      if (userDoc.exists) {
-        setState(() {
-          _userData = userDoc.data();
-        });
-      }
-
-      // 獲取健康記錄
-      await _loadHealthRecords(uid);
-
-      // 獲取用藥記錄
-      await _loadMedicationRecords(uid);
-
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
-
-    } catch (e) {
-      debugPrint('加載用戶數據失敗: $e');
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+    final generation = ++_listenerGeneration;
+    final old = [_profileSubscription, _healthRecordsSubscription, _medicineSubscription];
+    _profileSubscription = null;
+    _healthRecordsSubscription = null;
+    _medicineSubscription = null;
+    await Future.wait(old.whereType<StreamSubscription>().map((s) => s.cancel()));
+    if (!mounted || generation != _listenerGeneration) return;
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      setState(() { _userData = null; _recentRecords = []; _medicationRecords = []; _isLoading = false; });
+      return;
     }
+    setState(() { _isLoading = true; _readySources.clear(); _dataErrors.clear(); });
+    bool active() => mounted && generation == _listenerGeneration && _auth.currentUser?.uid == uid;
+    final owner = _firestore.collection('users').doc(uid);
+    _profileSubscription = owner.snapshots().listen((snapshot) {
+      if (!active()) return;
+      setState(() => _userData = snapshot.data());
+      _sourceReady('個人資料');
+    }, onError: (Object error) { if (active()) _sourceReady('個人資料', error); });
+    _healthRecordsSubscription = owner.collection('health_records')
+      .orderBy('record_time', descending: true).limit(20).snapshots().listen((snapshot) {
+        if (!active()) return;
+        try { _applyHealthRecords(snapshot); _sourceReady('健康紀錄'); }
+        catch (error) { _sourceReady('健康紀錄', error); }
+      }, onError: (Object error) { if (active()) _sourceReady('健康紀錄', error); });
+    _medicineSubscription = owner.collection('medicine').snapshots().listen((snapshot) {
+      if (!active()) return;
+      try { _applyMedicationRecords(snapshot); _sourceReady('用藥'); }
+      catch (error) { _sourceReady('用藥', error); }
+    }, onError: (Object error) { if (active()) _sourceReady('用藥', error); });
   }
 
-  Future<void> _loadHealthRecords(String uid) async {
-    final generation = ++_healthLoadGeneration;
-    try {
-      final query = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('health_records')
-          .orderBy('record_time', descending: true)
-          .limit(20)
-          .get();
-
+  void _applyHealthRecords(QuerySnapshot<Map<String, dynamic>> query) {
       List<Map<String, dynamic>> records = [];
 
       for (final doc in query.docs) {
@@ -122,7 +111,7 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
 
         // 解析儲存格式 (category + value 字串格式)
         final category = data['category'] as String?;
-        final valueStr = data['value'] as String? ?? '';
+        final valueStr = data['value']?.toString() ?? '';
 
         int? systolic;
         int? diastolic;
@@ -170,30 +159,17 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
         });
       }
 
-      if (!mounted || generation != _healthLoadGeneration) return;
-      setState(() {
-        _recentRecords = records;
-      });
-    } catch (e) {
-      debugPrint('獲取健康記錄失敗: $e');
-    }
+      setState(() => _recentRecords = records);
   }
 
-  Future<void> _loadMedicationRecords(String uid) async {
-    try {
-      final query = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('medicine')
-          .get();
-
+  void _applyMedicationRecords(QuerySnapshot<Map<String, dynamic>> query) {
       List<Map<String, dynamic>> medications = [];
 
       for (final doc in query.docs) {
         final data = doc.data();
 
         final name = data['name'] ?? '未命名藥物';
-        final dosage = data['dosage'] ?? '';
+        final dosage = data['dosage']?.toString() ?? '';
         final unit = data['unit'] ?? '顆';
         final frequency = data['frequency'] ?? '每日一次';
         final instruction = data['instruction'] ?? '';
@@ -221,13 +197,7 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
         });
       }
 
-      if (!mounted) return;
-      setState(() {
-        _medicationRecords = medications;
-      });
-    } catch (e) {
-      debugPrint('獲取用藥記錄失敗: $e');
-    }
+      setState(() => _medicationRecords = medications);
   }
 
   // 基本資訊獲取方法
@@ -446,7 +416,9 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
           ),
         ],
       ),
-      body: _isLoading
+      body: _dataErrors.isNotEmpty
+          ? DataErrorView(message: _dataErrors.entries.map((e) => '${e.key}：${e.value}').join('\n'), onRetry: _loadUserData)
+          : _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
         padding: const EdgeInsets.all(20),

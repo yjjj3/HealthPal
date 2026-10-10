@@ -1,3 +1,6 @@
+import '../utils/data_error_message.dart';
+import '../widgets/data_error_view.dart';
+import '../services/live_query_window.dart';
 import '../theme/app_colors.dart';
 // lib/screens/diet_log_screen.dart
 
@@ -17,9 +20,15 @@ class _DietLogScreenState extends State<DietLogScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Set<String> _expandedDates = {};
 
+  LiveQueryWindow? _window;
+  late Stream<QuerySnapshot> _logsStream;
+  @override
+  void dispose() { _window?.dispose(); super.dispose(); }
+
   @override
   void initState() {
     super.initState();
+    _logsStream = _getDietLogsStream();
     // 預設展開今天的紀錄
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     _expandedDates.add(today);
@@ -31,16 +40,13 @@ class _DietLogScreenState extends State<DietLogScreen> {
       return const Stream.empty();
     }
 
-    // 取得最近 30 天的飲食紀錄
-    final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+    // 歷史紀錄先載入 50 筆，需要時再擴大即時視窗
 
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('diet_records')
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(thirtyDaysAgo))
-        .orderBy('timestamp', descending: true)
-        .snapshots();
+    _window = LiveQueryWindow(_firestore.collection('users').doc(userId)
+      .collection('diet_records')
+      .orderBy('timestamp', descending: true),
+      onChanged: () { if (mounted) setState(() {}); });
+    return _window!.stream;
   }
 
   IconData _getMealIcon(String type) {
@@ -138,6 +144,8 @@ class _DietLogScreenState extends State<DietLogScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        actions: [TextButton(onPressed: _window?.hasMore == true ? () => _window?.loadMore() : null,
+          child: const Text('載入更多'))],
         elevation: 0,
         backgroundColor: Colors.white,
         title: const Text(
@@ -147,23 +155,14 @@ class _DietLogScreenState extends State<DietLogScreen> {
         iconTheme: const IconThemeData(color: AppColors.primary),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _getDietLogsStream(),
+        stream: _logsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
-                  const SizedBox(height: 16),
-                  Text('載入失敗：${snapshot.error}'),
-                ],
-              ),
-            );
+            return DataErrorView(message: dataErrorMessage(snapshot.error!), onRetry: () => _window?.refresh());
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
