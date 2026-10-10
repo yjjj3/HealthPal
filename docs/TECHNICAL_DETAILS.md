@@ -18,7 +18,7 @@ main.dart 初始化 Flutter 綁定、Firebase、通知、dotenv 與截圖保護�
 4. 移除 Markdown code fence 並解析 JSON；失敗回傳 error、rawContent、confidence 0。
 5. 多張圖片依序處理，單張失敗後繼續，結果可能只含部分成功資料或為空。
 6. 確認畫面提供人工核對；依用餐時間、服用時機與頻率轉換用藥模型和提醒時間。
-7. 處方箋存入 prescriptions；用藥以 Firestore batch 寫入 medicine。兩項儲存不是同一個原子交易。
+7. 用藥以 Firestore batch 寫入 medicine。另有 savePrescription 方法可寫入 prescriptions，但目前未找到呼叫點，且尚未配置對應規則。
 
 檔案依副檔名決定 MIME，記憶體輸入固定 JPEG。沒有完整 JSON schema 驗證，confidence 未校準。劑量轉換只擷取第一段整數，0.5 顆等劑量需修正與測試。HTTP 呼叫沒有明確 timeout、重試與限流策略。
 
@@ -53,15 +53,26 @@ AIAssistantService 與 HealthAIAnalyzer 蒐集個人資料、健康、用藥、�
 
 ## 資料存取與目前限制
 
-- firestore.rules 對健康、飲食、用藥與日誌要求擁有者權限；日誌僅允許新增及讀取。
-- prescriptions 與 settings 沒有允許規則，按此規則部署後相關操作會被拒絕。
-- users 文件允許所有已登入者讀取，不宜放入其他帳號不應看見的私人資料。
-- family_invites 允許任意已登入者更新，family_members 允許任意已登入者建立，需補邀請有效性與授權檢查。
-- 聊天成員可更新聊天室，但未限制 members 欄位變更，需增加欄位驗證。
+- settings 僅允許擁有者讀寫；prescriptions 尚未定義規則，呼叫儲存方法仍會被拒絕。
+- 家庭健康分享由資料擁有者的 family_members 文件授權，血糖／血壓查詢必須限定 category，用藥依分享權限讀取；日誌僅允許擁有者新增及讀取。
+- 接受邀請透過交易確認期限、對象及 pending 狀態，一次建立雙方關係。邀請者分享自己的資料；接受者預設不分享，需自行開啟。分享設定支援現有中文欄位別名。
+- 新家庭關係含 inviteId，規則以已接受的邀請驗證雙方關係。缺少此驗證紀錄的舊關係需雙方移除後重新綁定；不會自動信任原先寬鬆規則建立的資料。
+- 家庭移除一次刪除雙方關係；任何一方關係消失即停止授權。聊天室更新不可變更 members；新增訊息必須使用自己的 senderId。
+- users 基本文件仍允許所有已登入者讀取；健康或私人欄位與公開基本資料的拆分仍待後續處理。
 - 未包含 Storage rules 與 Firestore index 定義，後端部署尚不完整。
 - `.env` 被打包為 Flutter asset；不提交 Git 仍無法避免從發佈的應用取得金鑰。正式版應由後端保管金鑰、驗證使用者並限制額度。
 - 辨識結果需人工核對，尚無完整 OCR 正確率、藥品校驗或跨平台驗證證據。
 
 ## 測試狀態
 
-現有 widget test 是計數器範本。後續應優先驗證 JSON 解析、小數劑量、提醒時間換算、Firestore transaction、存取規則與真機通知。平台資料夾存在不等於已通過建置或功能驗證。
+新增交易與同步測試及 Firestore 模擬器授權測試：
+
+```sh
+flutter test --no-pub test/priority_one_test.dart
+npm install
+npm run test:rules
+```
+
+規則測試使用 demo-healthpal-priority1，本機需安裝 Firebase CLI 及其支援的 Java 版本。模擬器不會部署線上規則。正式規則需在新版應用及家庭關係重新綁定流程準備好後另行部署。
+
+原有 widget_test.dart 仍是計數器範本；真機通知、JSON 解析、小數劑量與跨平台建置尚待後續驗證。

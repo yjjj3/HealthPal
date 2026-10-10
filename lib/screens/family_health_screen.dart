@@ -53,9 +53,9 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
       print('   檢查路徑: users/${currentUser.uid}/family_members/${widget.userId}');
       final familyMemberDoc = await _firestore
           .collection('users')
-          .doc(currentUser.uid)
-          .collection('family_members')
           .doc(widget.userId)
+          .collection('family_members')
+          .doc(currentUser.uid)
           .get();
 
       if (!familyMemberDoc.exists) {
@@ -371,12 +371,15 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        if (_sharedData!['血糖'] == true) _buildHealthRecordStream('血糖', Icons.water_drop, 'bloodSugar'),
-        if (_sharedData!['血壓'] == true) _buildHealthRecordStream('血壓', Icons.favorite, 'bloodPressure'),
-        if (_sharedData!['用藥'] == true) _buildMedicationList(),
+        if (_canView('血糖', '血糖數據')) _buildHealthRecordStream('血糖', Icons.water_drop, 'bloodSugar'),
+        if (_canView('血壓', '血壓數據')) _buildHealthRecordStream('血壓', Icons.favorite, 'bloodPressure'),
+        if (_canView('用藥', '用藥記錄') || _sharedData?['用藥數據'] == true) _buildMedicationList(),
       ],
     );
   }
+
+  bool _canView(String key, String legacyKey) =>
+      _sharedData?[key] == true || _sharedData?[legacyKey] == true;
 
   /// 健康記錄卡片 - 使用 StreamBuilder 顯示實際數據
   Widget _buildHealthRecordStream(String title, IconData icon, String dataType) {
@@ -395,8 +398,12 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           .collection('users')
           .doc(widget.userId)
           .collection('health_records')
-          .snapshots(),  // 先移除排序和限制，查詢所有記錄
+          .where('category', isEqualTo: categoryFilter)
+          .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _buildHealthRecordCard(title, icon, '無法讀取，請確認分享權限', null);
+        }
         if (snapshot.connectionState == ConnectionState.waiting) {
           print('⏳ $title - 等待數據中...');
           return _buildHealthRecordCard(title, icon, '載入中...', null);
@@ -521,6 +528,9 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           .collection('medicine')
           .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _buildHealthRecordCard('用藥', Icons.medication, '無法讀取，請確認分享權限', null);
+        }
         if (snapshot.connectionState == ConnectionState.waiting) {
           print('⏳ 用藥 - 等待數據中...');
           return _buildHealthRecordCard('用藥', Icons.medication, '載入中...', null);

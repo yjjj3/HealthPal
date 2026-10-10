@@ -1,6 +1,7 @@
 // lib/services/health_platform_service.dart
 
 import 'dart:io';
+import 'health_record_sync_store.dart';
 import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,6 +21,7 @@ class HealthPlatformService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   bool _isAuthorized = false;
+  Future<SyncResult>? _activeSync;
   DateTime? _lastSyncTime;
 
   // 要讀取的健康數據類型
@@ -173,6 +175,17 @@ class HealthPlatformService {
 
   /// 同步健康數據到 Firestore
   Future<SyncResult> syncHealthData({int days = 7}) async {
+    if (_activeSync != null) return _activeSync!;
+    final operation = _syncHealthData(days: days);
+    _activeSync = operation;
+    try {
+      return await operation;
+    } finally {
+      _activeSync = null;
+    }
+  }
+
+  Future<SyncResult> _syncHealthData({required int days}) async {
     if (!_isAuthorized) {
       return SyncResult(
         success: false,
@@ -213,12 +226,14 @@ class HealthPlatformService {
         groupedData.putIfAbsent(category, () => []).add(point);
       }
 
-      // 批次寫入 Firestore
-      final batch = _firestore.batch();
-      final recordsRef = _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('health_records');
+      final records = <String, Map<String, dynamic>>{};
+      void writeRecord(String sourceId, Map<String, dynamic> record) {
+        if (records.containsKey(sourceId)) return;
+        records[sourceId] = record;
+        totalSynced++;
+        final category = record['category'] as String;
+        syncedByType[category] = (syncedByType[category] ?? 0) + 1;
+      }
 
       // 特別處理血壓數據（需要配對收縮壓和舒張壓）
       final systolicPoints = healthData
@@ -243,34 +258,22 @@ class HealthPlatformService {
         if (matchingDiastolic != null) {
           final sourceId = 'bp_${systolic.dateFrom.millisecondsSinceEpoch}';
 
-          // 檢查是否已存在
-          final existingQuery = await recordsRef
-              .where('source', isEqualTo: 'health_platform')
-              .where('source_id', isEqualTo: sourceId)
-              .limit(1)
-              .get();
+          final systolicValue = (systolic.value as NumericHealthValue).numericValue.round();
+          final diastolicValue = (matchingDiastolic.value as NumericHealthValue).numericValue.round();
 
-          if (existingQuery.docs.isEmpty) {
-            final systolicValue = (systolic.value as NumericHealthValue).numericValue.round();
-            final diastolicValue = (matchingDiastolic.value as NumericHealthValue).numericValue.round();
+          final recordData = {
+            'category': '血壓',
+            'value': '$systolicValue/$diastolicValue mmHg',
+            'unit': 'mmHg',
+            'emoji': '❤️',
+            'record_time': Timestamp.fromDate(systolic.dateFrom),
+            'source': 'health_platform',
+            'source_id': sourceId,
+            'source_name': systolic.sourceName,
+            'created_at': FieldValue.serverTimestamp(),
+          };
 
-            final recordData = {
-              'category': '血壓',
-              'value': '$systolicValue/$diastolicValue mmHg',
-              'unit': 'mmHg',
-              'emoji': '❤️',
-              'record_time': Timestamp.fromDate(systolic.dateFrom),
-              'source': 'health_platform',
-              'source_id': sourceId,
-              'source_name': systolic.sourceName,
-              'created_at': FieldValue.serverTimestamp(),
-            };
-
-            final docRef = recordsRef.doc();
-            batch.set(docRef, recordData);
-            totalSynced++;
-            syncedByType['血壓'] = (syncedByType['血壓'] ?? 0) + 1;
-          }
+          writeRecord(sourceId, recordData);
         }
       }
 
@@ -298,31 +301,19 @@ class HealthPlatformService {
           final totalSteps = entry.value;
           final sourceId = 'steps_$dateKey';
 
-          // 檢查是否已存在該日期的步數記錄
-          final existingQuery = await recordsRef
-              .where('source', isEqualTo: 'health_platform')
-              .where('source_id', isEqualTo: sourceId)
-              .limit(1)
-              .get();
+          final recordData = {
+            'category': '運動',
+            'value': '步行 $totalSteps 步',
+            'unit': '步',
+            'emoji': '🚶',
+            'record_time': Timestamp.fromDate(dayDates[dateKey]!),
+            'source': 'health_platform',
+            'source_id': sourceId,
+            'source_name': platformName,
+            'created_at': FieldValue.serverTimestamp(),
+          };
 
-          if (existingQuery.docs.isEmpty) {
-            final recordData = {
-              'category': '運動',
-              'value': '步行 $totalSteps 步',
-              'unit': '步',
-              'emoji': '🚶',
-              'record_time': Timestamp.fromDate(dayDates[dateKey]!),
-              'source': 'health_platform',
-              'source_id': sourceId,
-              'source_name': 'Apple 健康',
-              'created_at': FieldValue.serverTimestamp(),
-            };
-
-            final docRef = recordsRef.doc();
-            batch.set(docRef, recordData);
-            totalSynced++;
-            syncedByType['運動'] = (syncedByType['運動'] ?? 0) + 1;
-          }
+          writeRecord(sourceId, recordData);
         }
       }
 
@@ -338,26 +329,14 @@ class HealthPlatformService {
           // 跳過步數，因為上面已經按日期合併處理了
           if (point.type == HealthDataType.STEPS) continue;
 
-          // 檢查是否已存在相同時間的記錄
-          final existingQuery = await recordsRef
-              .where('source', isEqualTo: 'health_platform')
-              .where('source_id', isEqualTo: _generateSourceId(point))
-              .limit(1)
-              .get();
-
-          if (existingQuery.docs.isEmpty) {
-            final recordData = _convertToRecordData(point, category);
-            if (recordData != null) {
-              final docRef = recordsRef.doc();
-              batch.set(docRef, recordData);
-              totalSynced++;
-              syncedByType[category] = (syncedByType[category] ?? 0) + 1;
-            }
+          final recordData = _convertToRecordData(point, category);
+          if (recordData != null) {
+            writeRecord(_generateSourceId(point), recordData);
           }
         }
       }
 
-      await batch.commit();
+      await HealthRecordSyncStore(_firestore).upsert(uid, records);
 
       // 更新最後同步時間
       _lastSyncTime = now;

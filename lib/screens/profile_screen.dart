@@ -269,7 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
         }
 
-        if (latestWeight != null && latestWeight != _latestWeightFromRecords) {
+        if (latestWeight != _latestWeightFromRecords) {
           setState(() {
             _latestWeightFromRecords = latestWeight;
           });

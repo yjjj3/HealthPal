@@ -1,3 +1,4 @@
+import '../services/chat_message_service.dart';
 import 'dart:async';
 import '../theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +38,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   late String _safeChatId;
 
   bool _isSending = false;
+  String? _pendingMessageId;
+  String? _pendingMessageText;
   bool _showEmojiPicker = false;
   bool _chatRoomCreated = false;
   Timestamp? _lastMessageTimestamp;
@@ -62,15 +65,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _safeChatId = widget.chatId; 
     }
 
-    _loadMyName();
+    _initializeChatRoom();
+    _messageController.addListener(() => setState(() {}));
+  }
 
-    // 一進入聊天室就標記為已讀
+  Future<void> _initializeChatRoom() async {
+    await _loadMyName();
+    if (!mounted) return;
+    await _ensureChatRoomExists();
+    if (!mounted || !_chatRoomCreated) return;
     _markMessagesAsRead();
-    
-    _ensureChatRoomExists();
     _setupUnreadListener();
     _setupAutoScroll();
-    _messageController.addListener(() => setState(() {}));
   }
 
   void _setupAutoScroll() {
@@ -126,6 +132,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         await _createChatRoom();
       } else {
         print('✅ 聊天室已存在');
+        if (!mounted) return;
         setState(() {
           _chatRoomCreated = true;
         });
@@ -157,8 +164,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         'type': 'family',
       };
       
-      await _firestore.collection('chats').doc(_safeChatId).set(chatData);
+      final chatRef = _firestore.collection('chats').doc(_safeChatId);
+      await _firestore.runTransaction((transaction) async {
+        if (!(await transaction.get(chatRef)).exists) {
+          transaction.set(chatRef, chatData);
+        }
+      });
 
+      if (!mounted) return;
       setState(() {
         _chatRoomCreated = true;
       });
@@ -216,44 +229,31 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final user = _auth.currentUser;
     if (user == null) return;
 
+    setState(() => _isSending = true);
+    if (_pendingMessageText != message) {
+      _pendingMessageText = message;
+      _pendingMessageId = _firestore.collection('chats').doc(_safeChatId)
+          .collection('messages').doc().id;
+    }
     if (!_chatRoomCreated) {
       await _ensureChatRoomExists();
       if (!_chatRoomCreated) {
         print('❌ 聊天室創建失敗，無法發送訊息。');
+        if (mounted) setState(() => _isSending = false);
         return;
       }
     }
 
-    setState(() {
-      _isSending = true;
-    });
-
+    if (!mounted) return;
     try {
-      final messageData = {
-        'text': message,
-        'senderId': user.uid,
-        'senderName': _myName,
-        'timestamp': FieldValue.serverTimestamp(),
-        'type': 'text',
-      };
-      
-      // 1. 發送訊息到子集合
-      await _firestore
-          .collection('chats')
-          .doc(_safeChatId)
-          .collection('messages')
-          .add(messageData);
-
-      // 2. 更新聊天室最後訊息和未讀計數
-      await _firestore.runTransaction((transaction) async {
-        final chatRef = _firestore.collection('chats').doc(_safeChatId);
-        transaction.update(chatRef, {
-          'lastMessage': message.length > 20 ? '${message.substring(0, 20)}...' : message,
-          'lastTime': FieldValue.serverTimestamp(),
-          'unread.${widget.otherUserId}': FieldValue.increment(1), // 增加對方的未讀計數
-          // 注意：自己的未讀保持為0
-        });
-      });
+      await ChatMessageService(_firestore).sendOnce(
+        chatId: _safeChatId, messageId: _pendingMessageId!,
+        senderId: user.uid, recipientId: widget.otherUserId,
+        senderName: _myName, text: message,
+      );
+      _pendingMessageId = null;
+      _pendingMessageText = null;
+      if (!mounted) return;
 
       print('✅ 訊息發送成功');
 
@@ -265,11 +265,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     } on FirebaseException catch (e) {
       print('❌ 發送訊息失敗: ${e.code} - ${e.message}');
       
-      if (e.code == 'not-found') {
-        await _createChatRoom();
-        _sendMessage();
-        return;
-      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -280,9 +275,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         );
       }
     } finally {
-      setState(() {
-        _isSending = false;
-      });
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
     }
   }
 

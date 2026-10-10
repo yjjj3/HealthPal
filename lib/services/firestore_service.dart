@@ -81,7 +81,7 @@ class FirestoreService {
     final logCollection = _getMedicationLogsCollection();
     
     // isLogging 為 true 表示要執行記錄（將狀態從 false 切換為 true）
-    final isLogging = !medication.times_status[timeSlotIndex];
+    final isLogging = medication.shouldResetStatus || !medication.times_status[timeSlotIndex];
     
     double? newRemainingPills; 
     
@@ -117,7 +117,12 @@ class FirestoreService {
             final dosage = (data['total_pills'] as num? ?? 1).toDouble();
             
             // 2. 讀取狀態列表
-            final firestoreStatus = List<bool>.from(data['times_status'] ?? []);
+            final firestoreStatus = dataModel.shouldResetStatus
+                ? List<bool>.filled(dataModel.times_status.length, false)
+                : List<bool>.from(data['times_status'] ?? []);
+            if (timeSlotIndex < 0 || timeSlotIndex >= firestoreStatus.length) {
+              throw Exception('ValidationError: Invalid medication time slot.');
+            }
 
             // 3. 讀取現有庫存 (total_supply)，並使用容錯處理
             double currentRemainingPills = 0.0;
@@ -178,6 +183,7 @@ class FirestoreService {
             // 6. 提交狀態和庫存的更新 (使用未轉換的 Ref 進行更新)
             transaction.update(medicineRef, {
               'times_status': firestoreStatus,
+              'lastUpdated': Timestamp.now(),
               'total_supply': newRemainingPills! > 0 ? newRemainingPills : 0, 
             });
             debugPrint('Transaction: Document updated successfully.');

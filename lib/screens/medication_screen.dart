@@ -1,3 +1,5 @@
+import '../services/medication_day_service.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/medication_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -23,12 +25,19 @@ class MedicationScreen extends StatefulWidget {
   State<MedicationScreen> createState() => _MedicationScreenState();
 }
 
-class _MedicationScreenState extends State<MedicationScreen> {
+class _MedicationScreenState extends State<MedicationScreen>
+    with WidgetsBindingObserver {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance; 
   final FirestoreService _firestoreService = FirestoreService(); 
 
   late final CollectionReference<medicine> _medicationsCollection;
+
+  StreamSubscription<QuerySnapshot<medicine>>? _resetSubscription;
+  Stream<QuerySnapshot<medicine>>? _medicationsStream;
+  final Set<String> _resettingMedicationIds = {};
+  final Map<String, medicine> _observedMedications = {};
+  Timer? _dayTimer;
 
   final Map<String, bool> hoverMap = {};
 
@@ -60,75 +69,58 @@ class _MedicationScreenState extends State<MedicationScreen> {
       );
     }
     _lastResetDate = DateTime.now();
-  }
-
-  // 新增：檢查並重置用藥狀態的方法
-  List<medicine> _checkAndResetMedications(List<medicine> medications) {
-    final List<medicine> updatedMedications = [];
-    bool hasUpdates = false;
-
-    for (final med in medications) {
-      // 使用 model 內建的 shouldResetStatus 判斷是否需要重置
-      if (med.shouldResetStatus && med.times_status.any((status) => status)) {
-        // 使用 model 內建的 resetStatus 方法重置
-        final resetMed = med.resetStatus();
-        updatedMedications.add(resetMed);
-        hasUpdates = true;
-
-        // 在背景更新 Firestore
-        _updateMedicationInBackground(med.medicine_id!, resetMed);
-
-        // 重新排程今天的用藥提醒
-        if (med.medicine_id != null) {
-          _scheduleMedicationReminders(med.medicine_id!, resetMed);
-        }
-      } else if (med.shouldResetStatus) {
-        // 日期已過但沒有完成任何用藥，仍需更新 lastUpdated
-        final updatedMed = med.copyWith(lastUpdated: DateTime.now());
-        updatedMedications.add(updatedMed);
-        _updateMedicationInBackground(med.medicine_id!, updatedMed);
-
-        // 重新排程今天的用藥提醒
-        if (med.medicine_id != null) {
-          _scheduleMedicationReminders(med.medicine_id!, updatedMed);
-        }
-      } else {
-        updatedMedications.add(med);
-      }
-    }
-
-    if (hasUpdates && !_hasShownResetNotification) {
-      _hasShownResetNotification = true;
-
-      // 顯示重置通知
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.autorenew, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('新的一天開始！用藥狀態已重置'),
-              ],
-            ),
-            backgroundColor: AppColors.primary,
-            duration: Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+    WidgetsBinding.instance.addObserver(this);
+    _dayTimer = Timer.periodic(const Duration(minutes: 1), (_) => _refreshMedicationDay());
+    if (uid != null) {
+      _medicationsStream = _medicationsCollection.orderBy('name').snapshots();
+      _resetSubscription = _medicationsStream!.listen((snapshot) {
+        _observedMedications
+          ..clear()
+          ..addEntries(snapshot.docs.map((doc) => MapEntry(doc.id, doc.data())));
+        _refreshMedicationDay();
+      }, onError: (Object error) {
+        debugPrint('用藥重置監聽失敗: $error');
       });
     }
-
-    return updatedMedications;
   }
 
-  // 新增：在背景更新 Firestore 中的用藥狀態
-  Future<void> _updateMedicationInBackground(String medicineId, medicine updatedMed) async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _dayTimer?.cancel();
+    _resetSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshMedicationDay();
+  }
+
+  void _refreshMedicationDay() {
+    if (!mounted) return;
+    for (final entry in _observedMedications.entries) {
+      if (entry.value.shouldResetStatus) _resetMedication(entry.key);
+    }
+  }
+
+  Future<void> _resetMedication(String id) async {
+    if (!_resettingMedicationIds.add(id)) return;
     try {
-      await _medicationsCollection.doc(medicineId).set(updatedMed);
-      debugPrint('用藥狀態已重置: ${updatedMed.name}');
-    } catch (e) {
-      debugPrint('重置用藥狀態失敗: $e');
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return;
+      final reset = await MedicationDayService(_firestore).resetIfNeeded(uid, id);
+      if (reset == null || !mounted) return;
+      await _scheduleMedicationReminders(id, reset);
+      if (!mounted || _hasShownResetNotification) return;
+      _hasShownResetNotification = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('新的一天開始！用藥狀態已重置')),
+      );
+    } catch (error) {
+      debugPrint('重置用藥狀態失敗: $error');
+    } finally {
+      _resettingMedicationIds.remove(id);
     }
   }
 
@@ -140,6 +132,7 @@ class _MedicationScreenState extends State<MedicationScreen> {
     if (_lastResetDate == null || 
         currentDate.isAfter(DateTime(_lastResetDate!.year, _lastResetDate!.month, _lastResetDate!.day))) {
       _hasShownResetNotification = false;
+      _lastResetDate = now;
     }
   }
 
@@ -543,7 +536,7 @@ class _MedicationScreenState extends State<MedicationScreen> {
           children: [
             Expanded(
               child: StreamBuilder<QuerySnapshot<medicine>>(
-                stream: _medicationsCollection.orderBy('name').snapshots(),
+                stream: _medicationsStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
@@ -559,12 +552,13 @@ class _MedicationScreenState extends State<MedicationScreen> {
                     );
                   }
 
-                  var medications = snapshot.data!.docs
+                  if (!snapshot.hasData) {
+                    return const Center(child: Text('請先登入以查看用藥資料'));
+                  }
+                  final medications = snapshot.data!.docs
                       .map((doc) => doc.data().copyWith(medicine_id: doc.id)) 
                       .toList();
 
-                  // 新增：檢查並重置用藥狀態
-                  medications = _checkAndResetMedications(medications);
 
                   if (medications.isEmpty) {
                     return Center(

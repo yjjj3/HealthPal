@@ -33,7 +33,9 @@ class _DietScreenState extends State<DietScreen> {
   final ImagePicker _imagePicker = ImagePicker();
 
   // 用於監聽資料流的訂閱
-  late StreamSubscription<QuerySnapshot> _dietRecordsSubscription;
+  StreamSubscription<QuerySnapshot>? _dietRecordsSubscription;
+  Timer? _dietRetryTimer;
+  int _dietListenerGeneration = 0;
 
   // 新增：用於控制分析流程
   Completer<void>? _analysisCompleter;
@@ -84,10 +86,14 @@ class _DietScreenState extends State<DietScreen> {
   @override
   void dispose() {
     // 取消訂閱以避免記憶體洩漏
-    _dietRecordsSubscription.cancel();
+    _dietListenerGeneration++;
+    _dietRetryTimer?.cancel();
+    _dietRecordsSubscription?.cancel();
 
     // 取消任何正在進行的分析
-    _analysisCompleter?.complete();
+    if (_analysisCompleter?.isCompleted == false) {
+      _analysisCompleter!.complete();
+    }
     _analysisTimeoutTimer?.cancel();
 
     super.dispose();
@@ -110,7 +116,13 @@ class _DietScreenState extends State<DietScreen> {
   }
 
   // 使用 Stream 監聽實時資料
-  void _startListeningToDietRecords() {
+  Future<void> _startListeningToDietRecords() async {
+    final generation = ++_dietListenerGeneration;
+    _dietRetryTimer?.cancel();
+    final previous = _dietRecordsSubscription;
+    _dietRecordsSubscription = null;
+    await previous?.cancel();
+    if (!mounted || generation != _dietListenerGeneration) return;
     setState(() => _isLoading = true);
 
     try {
@@ -131,7 +143,7 @@ class _DietScreenState extends State<DietScreen> {
             (QuerySnapshot snapshot) {
 
               // 處理資料前先檢查是否還有連接
-              if (!mounted) return;
+              if (!mounted || generation != _dietListenerGeneration) return;
 
               final records = snapshot.docs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
@@ -171,16 +183,20 @@ class _DietScreenState extends State<DietScreen> {
                 }
               }
             },
-            onError: (error) {
-              if (mounted) {
-                setState(() {
-                  _isLoading = false;
-                  // 嘗試重新連接
-                  Future.delayed(const Duration(seconds: 2), () {
-                    if (mounted) _startListeningToDietRecords();
-                  });
-                });
+            onError: (Object error) {
+              if (!mounted || generation != _dietListenerGeneration) return;
+              setState(() => _isLoading = false);
+              // Permission errors need configuration changes, not endless retries.
+              if (error is FirebaseException &&
+                  error.code == 'permission-denied') {
+                return;
               }
+              _dietRetryTimer?.cancel();
+              _dietRetryTimer = Timer(const Duration(seconds: 2), () {
+                if (mounted && generation == _dietListenerGeneration) {
+                  _startListeningToDietRecords();
+                }
+              });
             },
           );
     } catch (e) {
@@ -468,7 +484,9 @@ class _DietScreenState extends State<DietScreen> {
       _analysisTimeoutTimer = null;
 
       // 完成 Completer
-      _analysisCompleter?.complete();
+      if (_analysisCompleter?.isCompleted == false) {
+      _analysisCompleter!.complete();
+    }
       _analysisCompleter = null;
 
       // 注意：這裡不關閉對話框，等待飲食記錄新增成功後自動關閉

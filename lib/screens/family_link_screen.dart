@@ -1,3 +1,4 @@
+import '../services/family_relationship_service.dart';
 import 'dart:async';
 import '../theme/app_colors.dart';
 // lib/screens/family_link_screen.dart
@@ -144,64 +145,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      final myName = userDoc.data()?['fullName'] ?? '家人';
-      final myEmail = user.email ?? '';
-
-      final inviterDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(invite.invitedBy)
-          .get();
-      final inviterEmail = inviterDoc.data()?['email'] ?? '';
-
-      final batch = FirebaseFirestore.instance.batch();
-
-      // 將邀請者加入我的家庭成員
-      batch.set(
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('family_members')
-            .doc(invite.invitedBy),
-        {
-          'userId': invite.invitedBy,
-          'name': invite.inviterName,
-          'relation': invite.relation,
-          'email': inviterEmail,
-          'isOnline': false,
-          'sharedData': invite.sharedData,
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-      );
-
-      // 將我加入邀請者的家庭成員
-      batch.set(
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(invite.invitedBy)
-            .collection('family_members')
-            .doc(user.uid),
-        {
-          'userId': user.uid,
-          'name': myName,
-          'relation': invite.relation,
-          'email': myEmail,
-          'isOnline': false,
-          'sharedData': invite.sharedData,
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-      );
-
-      // 更新邀請狀態
-      batch.update(
-        FirebaseFirestore.instance.collection('family_invites').doc(invite.docId),
-        {'status': 'accepted'},
-      );
-
-      await batch.commit();
+      await FamilyRelationshipService().acceptInvite(invite.docId);
 
       if (mounted) {
         setState(() {
@@ -228,10 +172,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
   // 拒絕邀請
   Future<void> _declineInvite(_PendingInvite invite) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('family_invites')
-          .doc(invite.docId)
-          .update({'status': 'declined'});
+      await FamilyRelationshipService().declineInvite(invite.docId);
 
       if (mounted) {
         setState(() {
@@ -347,90 +288,12 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return false;
 
-      final inviteDoc = await FirebaseFirestore.instance
-          .collection('family_invites')
-          .doc(code)
-          .get();
-
-      if (!inviteDoc.exists) return false;
-
-      final data = inviteDoc.data()!;
-      if (data['status'] != 'pending') return false;
-
-      // 確認沒有過期
-      final expiresAt = (data['expiresAt'] as Timestamp?)?.toDate();
-      if (expiresAt != null && expiresAt.isBefore(DateTime.now())) return false;
-
-      final invitedBy = data['invitedBy'] as String;
-      // 不能接受自己的邀請
-      if (invitedBy == user.uid) return false;
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      final myName = userDoc.data()?['fullName'] ?? '家人';
-      final myEmail = user.email ?? '';
-
-      final inviterDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(invitedBy)
-          .get();
-      final inviterName = data['inviterName'] ?? '家人';
-      final inviterEmail = inviterDoc.data()?['email'] ?? '';
-      final relation = data['relation'] ?? '家人';
-      final sharedData = Map<String, bool>.from(data['sharedData'] ?? {});
-
-      final batch = FirebaseFirestore.instance.batch();
-
-      // 將邀請者加入我的家庭成員
-      batch.set(
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('family_members')
-            .doc(invitedBy),
-        {
-          'userId': invitedBy,
-          'name': inviterName,
-          'relation': relation,
-          'email': inviterEmail,
-          'isOnline': false,
-          'sharedData': sharedData,
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-      );
-
-      // 將我加入邀請者的家庭成員
-      batch.set(
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(invitedBy)
-            .collection('family_members')
-            .doc(user.uid),
-        {
-          'userId': user.uid,
-          'name': myName,
-          'relation': relation,
-          'email': myEmail,
-          'isOnline': false,
-          'sharedData': sharedData,
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-      );
-
-      // 更新邀請狀態
-      batch.update(
-        FirebaseFirestore.instance.collection('family_invites').doc(code),
-        {'status': 'accepted'},
-      );
-
-      await batch.commit();
+      await FamilyRelationshipService().acceptInvite(code);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('已成功與 $inviterName 完成綁定！'),
+            content: Text('已成功完成家庭綁定！'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -530,7 +393,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '設定 ${member.name} 的資料分享權限',
+                    '設定我分享給 ${member.name} 的資料',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                   const Divider(height: 30, thickness: 1, color: AppColors.border),
@@ -627,13 +490,14 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
       );
 
       if (confirmed == true) {
-        // 從自己的家庭成員列表中移除
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('family_members')
-            .doc(member.userId)
-            .delete();
+        final db = FirebaseFirestore.instance;
+        final batch = db.batch();
+        batch.delete(db.collection('users').doc(user.uid)
+            .collection('family_members').doc(member.userId));
+        batch.delete(db.collection('users').doc(member.userId)
+            .collection('family_members').doc(user.uid));
+        await batch.commit();
+        if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('已移除 ${member.name}')),

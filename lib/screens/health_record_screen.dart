@@ -26,6 +26,7 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
   List<Map<String, dynamic>> _recentRecords = [];
   List<Map<String, dynamic>> _medicationRecords = [];
   bool _isLoading = true;
+  int _healthLoadGeneration = 0;
 
   // 即時監聽的訂閱，需在 dispose() 時取消，避免每次進出此頁都多洩漏一組監聽器
   StreamSubscription<QuerySnapshot>? _healthRecordsSubscription;
@@ -69,6 +70,7 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
       // 獲取用戶基本資料
       final userDoc = await _firestore.collection('users').doc(uid).get();
 
+      if (!mounted) return;
       if (userDoc.exists) {
         setState(() {
           _userData = userDoc.data();
@@ -81,12 +83,14 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
       // 獲取用藥記錄
       await _loadMedicationRecords(uid);
 
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
 
     } catch (e) {
       debugPrint('加載用戶數據失敗: $e');
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -94,6 +98,7 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
   }
 
   Future<void> _loadHealthRecords(String uid) async {
+    final generation = ++_healthLoadGeneration;
     try {
       final query = await _firestore
           .collection('users')
@@ -103,73 +108,72 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
           .limit(20)
           .get();
 
-      if (query.docs.isNotEmpty) {
-        List<Map<String, dynamic>> records = [];
+      List<Map<String, dynamic>> records = [];
 
-        for (final doc in query.docs) {
-          final data = doc.data();
+      for (final doc in query.docs) {
+        final data = doc.data();
 
-          Timestamp? timestamp;
-          if (data['record_time'] != null) {
-            timestamp = data['record_time'] as Timestamp;
-          } else if (data['createdAt'] != null) {
-            timestamp = data['createdAt'] as Timestamp;
-          }
-
-          // 解析儲存格式 (category + value 字串格式)
-          final category = data['category'] as String?;
-          final valueStr = data['value'] as String? ?? '';
-
-          int? systolic;
-          int? diastolic;
-          double? glucose;
-          double? weight;
-          int? heartRate;
-
-          if (category == '血壓' && valueStr.contains('/')) {
-            // 解析 "120/80 mmHg" 格式
-            final parts = valueStr.split(' ')[0].split('/');
-            if (parts.length == 2) {
-              systolic = int.tryParse(parts[0]);
-              diastolic = int.tryParse(parts[1]);
-            }
-          } else if (category == '血糖') {
-            // 解析 "100 mg/dL" 格式
-            final numStr = valueStr.split(' ')[0];
-            glucose = double.tryParse(numStr);
-          } else if (category == '體重') {
-            // 解析 "65 kg" 格式
-            final numStr = valueStr.split(' ')[0];
-            weight = double.tryParse(numStr);
-          } else if (category == '心率') {
-            // 解析 "72 bpm" 格式
-            final numStr = valueStr.split(' ')[0];
-            heartRate = int.tryParse(numStr);
-          }
-
-          // 也支援舊格式（直接儲存數值欄位）
-          systolic ??= data['systolic_blood_pressure'] as int? ?? data['systolic'] as int?;
-          diastolic ??= data['diastolic_blood_pressure'] as int? ?? data['diastolic'] as int?;
-          glucose ??= (data['blood_glucose'] ?? data['glucose'])?.toDouble();
-          weight ??= data['weight']?.toDouble();
-          heartRate ??= data['heart_rate'] as int? ?? data['heartRate'] as int?;
-
-          records.add({
-            'id': doc.id,
-            'record_time': timestamp?.toDate() ?? DateTime.now(),
-            'category': category,
-            'systolic_blood_pressure': systolic,
-            'diastolic_blood_pressure': diastolic,
-            'blood_glucose': glucose,
-            'weight': weight,
-            'heart_rate': heartRate,
-          });
+        Timestamp? timestamp;
+        if (data['record_time'] != null) {
+          timestamp = data['record_time'] as Timestamp;
+        } else if (data['createdAt'] != null) {
+          timestamp = data['createdAt'] as Timestamp;
         }
 
-        setState(() {
-          _recentRecords = records;
+        // 解析儲存格式 (category + value 字串格式)
+        final category = data['category'] as String?;
+        final valueStr = data['value'] as String? ?? '';
+
+        int? systolic;
+        int? diastolic;
+        double? glucose;
+        double? weight;
+        int? heartRate;
+
+        if (category == '血壓' && valueStr.contains('/')) {
+          // 解析 "120/80 mmHg" 格式
+          final parts = valueStr.split(' ')[0].split('/');
+          if (parts.length == 2) {
+            systolic = int.tryParse(parts[0]);
+            diastolic = int.tryParse(parts[1]);
+          }
+        } else if (category == '血糖') {
+          // 解析 "100 mg/dL" 格式
+          final numStr = valueStr.split(' ')[0];
+          glucose = double.tryParse(numStr);
+        } else if (category == '體重') {
+          // 解析 "65 kg" 格式
+          final numStr = valueStr.split(' ')[0];
+          weight = double.tryParse(numStr);
+        } else if (category == '心率') {
+          // 解析 "72 bpm" 格式
+          final numStr = valueStr.split(' ')[0];
+          heartRate = int.tryParse(numStr);
+        }
+
+        // 也支援舊格式（直接儲存數值欄位）
+        systolic ??= data['systolic_blood_pressure'] as int? ?? data['systolic'] as int?;
+        diastolic ??= data['diastolic_blood_pressure'] as int? ?? data['diastolic'] as int?;
+        glucose ??= (data['blood_glucose'] ?? data['glucose'])?.toDouble();
+        weight ??= data['weight']?.toDouble();
+        heartRate ??= data['heart_rate'] as int? ?? data['heartRate'] as int?;
+
+        records.add({
+          'id': doc.id,
+          'record_time': timestamp?.toDate() ?? DateTime.now(),
+          'category': category,
+          'systolic_blood_pressure': systolic,
+          'diastolic_blood_pressure': diastolic,
+          'blood_glucose': glucose,
+          'weight': weight,
+          'heart_rate': heartRate,
         });
       }
+
+      if (!mounted || generation != _healthLoadGeneration) return;
+      setState(() {
+        _recentRecords = records;
+      });
     } catch (e) {
       debugPrint('獲取健康記錄失敗: $e');
     }
@@ -183,45 +187,44 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
           .collection('medicine')
           .get();
 
-      if (query.docs.isNotEmpty) {
-        List<Map<String, dynamic>> medications = [];
+      List<Map<String, dynamic>> medications = [];
 
-        for (final doc in query.docs) {
-          final data = doc.data();
+      for (final doc in query.docs) {
+        final data = doc.data();
 
-          final name = data['name'] ?? '未命名藥物';
-          final dosage = data['dosage'] ?? '';
-          final unit = data['unit'] ?? '顆';
-          final frequency = data['frequency'] ?? '每日一次';
-          final instruction = data['instruction'] ?? '';
+        final name = data['name'] ?? '未命名藥物';
+        final dosage = data['dosage'] ?? '';
+        final unit = data['unit'] ?? '顆';
+        final frequency = data['frequency'] ?? '每日一次';
+        final instruction = data['instruction'] ?? '';
 
-          final timesStatus = data['times_status'] as List<dynamic>?;
-          int totalDoses = timesStatus?.length ?? 0;
-          int completedDoses = timesStatus?.where((status) => status == true).length ?? 0;
-          bool isTaken = totalDoses > 0 && completedDoses == totalDoses;
+        final timesStatus = data['times_status'] as List<dynamic>?;
+        int totalDoses = timesStatus?.length ?? 0;
+        int completedDoses = timesStatus?.where((status) => status == true).length ?? 0;
+        bool isTaken = totalDoses > 0 && completedDoses == totalDoses;
 
-          // dosage 可能是 "1 顆" 或只是 "1"，需要判斷
-          String displayDosage = dosage;
-          if (dosage.isNotEmpty && !dosage.contains(unit) && !dosage.contains(' ')) {
-            // 如果 dosage 只是數字，加上單位
-            displayDosage = '$dosage $unit';
-          }
-
-          medications.add({
-            'id': doc.id,
-            'name': name,
-            'dosage': displayDosage,
-            'frequency': instruction.isNotEmpty ? '$frequency · $instruction' : frequency,
-            'isTaken': isTaken,
-            'completedDoses': completedDoses,
-            'totalDoses': totalDoses,
-          });
+        // dosage 可能是 "1 顆" 或只是 "1"，需要判斷
+        String displayDosage = dosage;
+        if (dosage.isNotEmpty && !dosage.contains(unit) && !dosage.contains(' ')) {
+          // 如果 dosage 只是數字，加上單位
+          displayDosage = '$dosage $unit';
         }
 
-        setState(() {
-          _medicationRecords = medications;
+        medications.add({
+          'id': doc.id,
+          'name': name,
+          'dosage': displayDosage,
+          'frequency': instruction.isNotEmpty ? '$frequency · $instruction' : frequency,
+          'isTaken': isTaken,
+          'completedDoses': completedDoses,
+          'totalDoses': totalDoses,
         });
       }
+
+      if (!mounted) return;
+      setState(() {
+        _medicationRecords = medications;
+      });
     } catch (e) {
       debugPrint('獲取用藥記錄失敗: $e');
     }

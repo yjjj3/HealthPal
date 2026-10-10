@@ -17,6 +17,80 @@ service cloud.firestore {
       return request.resource.data.keys().hasAll(fields);
     }
 
+    function validSharing(shared) {
+      return shared is map
+        && shared.keys().hasOnly(['血糖', '血糖數據', '血壓', '血壓數據',
+          '用藥', '用藥記錄', '用藥數據', '健康分析', '分析數據'])
+        && shared.get('血糖', false) is bool
+        && shared.get('血糖數據', false) is bool
+        && shared.get('血壓', false) is bool
+        && shared.get('血壓數據', false) is bool
+        && shared.get('用藥', false) is bool
+        && shared.get('用藥記錄', false) is bool
+        && shared.get('用藥數據', false) is bool
+        && shared.get('健康分析', false) is bool
+        && shared.get('分析數據', false) is bool;
+    }
+
+    function noSharing(shared) {
+      return validSharing(shared)
+        && shared.get('血糖', false) == false
+        && shared.get('血糖數據', false) == false
+        && shared.get('血壓', false) == false
+        && shared.get('血壓數據', false) == false
+        && shared.get('用藥', false) == false
+        && shared.get('用藥記錄', false) == false
+        && shared.get('用藥數據', false) == false
+        && shared.get('健康分析', false) == false
+        && shared.get('分析數據', false) == false;
+    }
+
+    function inviteRecipient(invite) {
+      let email = request.auth.token.get('email', '').lower();
+      return (invite.get('invitedToEmail', '') != ''
+          && invite.invitedToEmail == email)
+        || (invite.get('emailOrPhone', '') != ''
+          && invite.emailOrPhone == email)
+        || (!invite.keys().hasAny(['invitedToEmail', 'emailOrPhone'])
+          && invite.get('inviteCode', '') != '');
+    }
+
+    function validFamily(owner, viewer) {
+      let grantPath = /databases/$(database)/documents/users/$(owner)/family_members/$(viewer);
+      let reversePath = /databases/$(database)/documents/users/$(viewer)/family_members/$(owner);
+      let grant = get(grantPath).data;
+      let invite = get(/databases/$(database)/documents/family_invites/$(grant.inviteId)).data;
+      return exists(grantPath) && exists(reversePath)
+        && grant.userId == viewer
+        && invite.status == 'accepted'
+        && ((invite.invitedBy == owner && invite.acceptedBy == viewer)
+          || (invite.invitedBy == viewer && invite.acceptedBy == owner));
+    }
+
+    function familySharing(owner, kind) {
+      let shared = get(/databases/$(database)/documents/users/$(owner)/family_members/$(request.auth.uid)).data.sharedData;
+      return isAuthenticated() && validFamily(owner, request.auth.uid)
+        && ((kind == '血糖' && (shared.get('血糖', false) || shared.get('血糖數據', false)))
+          || (kind == '血壓' && (shared.get('血壓', false) || shared.get('血壓數據', false)))
+          || (kind == '用藥' && (shared.get('用藥', false) || shared.get('用藥記錄', false) || shared.get('用藥數據', false))));
+    }
+
+    // Relationships may only be created while consuming a pending invitation.
+    function invitedRelationship(owner, member) {
+      let inviteId = request.resource.data.inviteId;
+      let before = get(/databases/$(database)/documents/family_invites/$(inviteId)).data;
+      let after = getAfter(/databases/$(database)/documents/family_invites/$(inviteId)).data;
+      return isAuthenticated()
+        && request.resource.data.userId == member && owner != member
+        && before.status == 'pending' && before.expiresAt > request.time
+        && after.status == 'accepted' && after.acceptedBy == request.auth.uid
+        && ((before.invitedBy == owner && member == request.auth.uid
+            && request.resource.data.sharedData == before.sharedData)
+          || (owner == request.auth.uid && member == before.invitedBy
+            && noSharing(request.resource.data.sharedData)))
+        && existsAfter(/databases/$(database)/documents/users/$(member)/family_members/$(owner));
+    }
+
     // 用戶資料 (users/{userId})
     match /users/{userId} {
       // 已登入用戶可讀取基本資料（接受家庭邀請時需要查詢對方的名字/email）
@@ -37,7 +111,7 @@ service cloud.firestore {
 
       // 用藥紀錄 (users/{userId}/medicine)
       match /medicine/{medicineId} {
-        allow read: if isOwner(userId);
+        allow read: if isOwner(userId) || familySharing(userId, '用藥');
         allow create: if isOwner(userId)
           && hasRequiredFields(['name', 'frequency', 'times_status']);
         allow update: if isOwner(userId);
@@ -56,10 +130,14 @@ service cloud.firestore {
 
       // 健康紀錄 (users/{userId}/health_records)
       match /health_records/{recordId} {
-        allow read: if isOwner(userId);
+        allow read: if isOwner(userId) || familySharing(userId, resource.data.category);
         allow create: if isOwner(userId);
         allow update: if isOwner(userId);
         allow delete: if isOwner(userId);
+      }
+
+      match /settings/{settingId} {
+        allow read, write: if isOwner(userId);
       }
 
       // 飲食紀錄 (users/{userId}/diet_records)
@@ -71,22 +149,44 @@ service cloud.firestore {
       }
     }
     
-    // 家庭邀請碼 (family_invites/{inviteCode})
+    // Invitation code possession authorizes redemption; targeted emails do not.
     match /family_invites/{inviteCode} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated()
-        && request.resource.data.invitedBy == request.auth.uid;
-      allow update: if isAuthenticated();
+        && request.resource.data.invitedBy == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time
+        && !request.resource.data.keys().hasAny(['acceptedBy'])
+        && validSharing(request.resource.data.sharedData);
+      allow update: if isAuthenticated()
+        && resource.data.status == 'pending'
+        && resource.data.expiresAt > request.time
+        && resource.data.invitedBy != request.auth.uid
+        && inviteRecipient(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'acceptedBy', 'respondedAt'])
+        && request.resource.data.acceptedBy == request.auth.uid
+        && request.resource.data.respondedAt == request.time
+        && (request.resource.data.status in ['declined', 'rejected']
+          || (request.resource.data.status == 'accepted'
+            && existsAfter(/databases/$(database)/documents/users/$(resource.data.invitedBy)/family_members/$(request.auth.uid))
+            && existsAfter(/databases/$(database)/documents/users/$(request.auth.uid)/family_members/$(resource.data.invitedBy))));
       allow delete: if isAuthenticated()
-        && resource.data.invitedBy == request.auth.uid;
+        && resource.data.invitedBy == request.auth.uid
+        && resource.data.status == 'pending';
     }
-    
-    /// 家庭成員 (users/{userId}/family_members)
+
     match /users/{userId}/family_members/{memberId} {
-      allow read: if isOwner(userId);
-      allow create: if isAuthenticated(); // 允許接受邀請的人寫入對方的 family_members
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow read: if isOwner(userId)
+        || (isAuthenticated() && request.auth.uid == memberId);
+      allow create: if invitedRelationship(userId, memberId);
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['sharedData', 'name', 'relation', 'isOnline', 'avatarUrl'])
+        && validSharing(request.resource.data.sharedData);
+      allow delete: if isOwner(userId)
+        || (isAuthenticated() && request.auth.uid == memberId);
     }
 
     // 聊天室 (chats/{chatId})
@@ -102,13 +202,17 @@ service cloud.firestore {
 
       // 更新（發訊息時更新 lastMessage / unread）：必須是成員
       allow update: if isAuthenticated()
-        && request.auth.uid in resource.data.members;
+        && request.auth.uid in resource.data.members
+        && request.resource.data.members == resource.data.members;
 
       // 訊息子集合：聊天室成員才能讀寫
       match /messages/{messageId} {
-        allow read, create: if isAuthenticated()
+        allow read: if isAuthenticated()
           && exists(/databases/$(database)/documents/chats/$(chatId))
           && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
+        allow create: if isAuthenticated()
+          && request.resource.data.senderId == request.auth.uid
+          && request.auth.uid in getAfter(/databases/$(database)/documents/chats/$(chatId)).data.members;
       }
     }
   }

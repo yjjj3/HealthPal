@@ -1,3 +1,4 @@
+import '../services/family_relationship_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -409,7 +410,7 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
       // 過濾出匹配當前使用者 email 或手機號碼的邀請
       final invitations = invitationsQuery.docs.where((doc) {
         final data = doc.data();
-        final emailOrPhone = (data['emailOrPhone'] as String?)?.toLowerCase().trim();
+        final emailOrPhone = ((data['invitedToEmail'] ?? data['emailOrPhone']) as String?)?.toLowerCase().trim();
 
         // 匹配 email 或手機號碼
         return emailOrPhone == userEmail ||
@@ -418,10 +419,10 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
         final data = doc.data();
         return {
           'id': doc.id,
-          'inviterName': data['name'] ?? '未知用戶',
+          'inviterName': data['inviterName'] ?? data['name'] ?? '未知用戶',
           'relation': data['relation'] ?? '家人',
           'invitedAt': data['invitedAt'] != null
-              ? DateTime.fromMillisecondsSinceEpoch(data['invitedAt'])
+              ? (data['invitedAt'] is Timestamp ? (data['invitedAt'] as Timestamp).toDate() : DateTime.fromMillisecondsSinceEpoch(data['invitedAt']))
               : DateTime.now(),
           'sharedData': data['sharedData'] ?? {},
           'invitedBy': data['invitedBy'],
@@ -486,7 +487,7 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
         // 過濾出匹配當前使用者的邀請
         final filteredInvitations = snapshot.docs.where((doc) {
           final data = doc.data();
-          final emailOrPhone = (data['emailOrPhone'] as String?)?.toLowerCase().trim();
+          final emailOrPhone = ((data['invitedToEmail'] ?? data['emailOrPhone']) as String?)?.toLowerCase().trim();
 
           // 匹配 email 或手機號碼
           return emailOrPhone == userEmail ||
@@ -495,10 +496,10 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
           final data = doc.data();
           return {
             'id': doc.id,
-            'inviterName': data['name'] ?? '未知用戶',
+            'inviterName': data['inviterName'] ?? data['name'] ?? '未知用戶',
             'relation': data['relation'] ?? '家人',
             'invitedAt': data['invitedAt'] != null
-                ? DateTime.fromMillisecondsSinceEpoch(data['invitedAt'])
+                ? (data['invitedAt'] is Timestamp ? (data['invitedAt'] as Timestamp).toDate() : DateTime.fromMillisecondsSinceEpoch(data['invitedAt']))
                 : DateTime.now(),
             'sharedData': data['sharedData'] ?? {},
           };
@@ -577,24 +578,9 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
         return;
       }
 
-      final invitationData = invitationDoc.data();
-
-      // 更新邀請狀態
-      await FirebaseFirestore.instance
-          .collection('family_invites')
-          .doc(invitationId)
-          .update({
-        'status': accepted ? 'accepted' : 'rejected',
-        'respondedAt': FieldValue.serverTimestamp(),
-      });
-
       if (accepted) {
-        // 建立家庭成員關係
-        await _createFamilyRelationship(invitationData!, user.uid);
-        
-        // 建立聊天室
-        await _createChatRoom(invitationData, user.uid);
-        
+        await FamilyRelationshipService().acceptInvite(invitationId);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('已成功加入家庭群組'),
@@ -602,6 +588,8 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
           ),
         );
       } else {
+        await FamilyRelationshipService().declineInvite(invitationId);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('已拒絕邀請'),
@@ -632,131 +620,6 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
     }
   }
 
-// 新增：建立聊天室
-Future<void> _createChatRoom(Map<String, dynamic>? invitationData, String currentUserId) async {
-  if (invitationData == null) return;
-
-  final inviterId = invitationData['invitedBy'];
-  final currentUserName = _userData?.fullName ?? '家庭成員';
-
-  // 從 Firestore 獲取邀請者的真實姓名
-  String inviterName = invitationData['name']; // 預設值
-  try {
-    final inviterDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(inviterId)
-        .get();
-    if (inviterDoc.exists) {
-      inviterName = inviterDoc.data()?['fullName'] ?? invitationData['name'];
-    }
-  } catch (e) {
-    debugPrint('獲取邀請者姓名失敗: $e');
-  }
-
-  // 檢查是否已經有聊天室
-  final existingChat = await FirebaseFirestore.instance
-      .collection('chats')
-      .where('members', arrayContainsAny: [currentUserId, inviterId])
-      .get();
-
-  // 如果已經有聊天室，就不重複建立
-  for (final doc in existingChat.docs) {
-    final members = List<String>.from(doc['members']);
-    if (members.contains(currentUserId) && members.contains(inviterId)) {
-      return; // 聊天室已存在
-    }
-  }
-
-  // 建立新的聊天室
-  final chatId = '${currentUserId}_$inviterId'; // 或用 Firebase 自動生成 ID
-
-  await FirebaseFirestore.instance
-      .collection('chats')
-      .doc(chatId)
-      .set({
-    'members': [currentUserId, inviterId],
-    'memberNames': {
-      currentUserId: currentUserName,
-      inviterId: inviterName,
-    },
-    'lastMessage': '你們現在是家庭成員了！開始聊天吧～',
-    'lastTime': FieldValue.serverTimestamp(),
-    'unread': {
-      currentUserId: 0,
-      inviterId: 0,
-    },
-    'createdAt': FieldValue.serverTimestamp(),
-    'type': 'family', // 標記為家庭聊天
-  });
-}
-
-  // 建立家庭成員關係
-  Future<void> _createFamilyRelationship(Map<String, dynamic>? invitationData, String currentUserId) async {
-    if (invitationData == null) return;
-
-    final inviterId = invitationData['invitedBy'];
-    final relation = invitationData['relation'];
-    final sharedData = invitationData['sharedData'] ?? {};
-
-    // 從 Firestore 獲取邀請者的真實姓名
-    String inviterName = invitationData['name']; // 預設值
-    try {
-      final inviterDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(inviterId)
-          .get();
-      if (inviterDoc.exists) {
-        inviterName = inviterDoc.data()?['fullName'] ?? invitationData['name'];
-      }
-    } catch (e) {
-      debugPrint('獲取邀請者姓名失敗: $e');
-    }
-
-    // 在邀請者的家庭成員列表中加入當前用戶
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(inviterId)
-        .collection('family_members')
-        .doc(currentUserId)
-        .set({
-      'name': _userData?.fullName ?? '家庭成員',
-      'relation': _getReverseRelation(relation),
-      'userId': currentUserId,
-      'email': _userData?.email ?? '',
-      'sharedData': sharedData,
-      'joinedAt': FieldValue.serverTimestamp(),
-    });
-
-    // 在當前用戶的家庭成員列表中加入邀請者
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(currentUserId)
-        .collection('family_members')
-        .doc(inviterId)
-        .set({
-      'name': inviterName,
-      'relation': relation,
-      'userId': inviterId,
-      'email': invitationData['emailOrPhone'],
-      'sharedData': sharedData,
-      'joinedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  // 獲取相反的關係稱謂
-  String _getReverseRelation(String relation) {
-    switch (relation) {
-      case '父親': return '兒子/女兒';
-      case '母親': return '兒子/女兒';
-      case '兒子': return '父親/母親';
-      case '女兒': return '父親/母親';
-      case '配偶': return '配偶';
-      case '祖父': return '孫子/孫女';
-      case '祖母': return '孫子/孫女';
-      default: return '家人';
-    }
-  }
-
   // 標記藥物為已完成（使用 FirestoreService 以同步更新用藥日誌）
   Future<void> _completeMedication(MedicationRecord med) async {
     if (med.medicineId == null || med.timeIndex == null) {
@@ -779,7 +642,7 @@ Future<void> _createChatRoom(Map<String, dynamic>? invitationData, String curren
       final medication = medicationDoc.data()!;
 
       // 檢查該時段是否已經完成（避免重複執行）
-      if (medication.times_status[med.timeIndex!]) {
+      if (!medication.shouldResetStatus && medication.times_status[med.timeIndex!]) {
         debugPrint('⚠️ 該時段已完成用藥');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
