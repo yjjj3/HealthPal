@@ -56,12 +56,6 @@ dependencies:
   health: ^13.2.1
   permission_handler: ^11.3.1
 
-  # OpenAI ChatGPT API
-  dart_openai: ^5.1.0
-
-  # 環境變數設定
-  flutter_dotenv: ^5.1.0
-
   # HTTP 客戶端（用於 OpenAI API 呼叫）
   http: ^1.1.0
 
@@ -108,6 +102,5 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
-    - .env
     - assets/Google_icon.png
     - assets/icon.png

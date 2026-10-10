@@ -1,6 +1,6 @@
+import '../models/ai/nutrition_analysis.dart';
 import '../utils/data_error_message.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -42,10 +42,7 @@ class _DietScreenState extends State<DietScreen> {
 
   // 新增：用於控制分析流程
   Completer<void>? _analysisCompleter;
-  Timer? _analysisTimeoutTimer;
   Map<String, dynamic>? _currentAnalysisResult;
-  String? _currentFoodName;
-  String? _currentMealType;
 
   // 非食物關鍵詞列表
   final List<String> _nonFoodKeywords = [
@@ -103,7 +100,6 @@ class _DietScreenState extends State<DietScreen> {
     if (_analysisCompleter?.isCompleted == false) {
       _analysisCompleter!.complete();
     }
-    _analysisTimeoutTimer?.cancel();
 
     super.dispose();
   }
@@ -296,25 +292,8 @@ class _DietScreenState extends State<DietScreen> {
 
     if (!mounted) return;
     setState(() => _isAnalyzing = true);
-    _currentFoodName = foodName;
-    _currentMealType = mealType;
-    _analysisCompleter = Completer<void>();
-
-    // 設定超時計時器（20秒後強制關閉）
-    _analysisTimeoutTimer = Timer(const Duration(seconds: 20), () {
-      if (_isAnalyzing && context.mounted) {
-        _closeAnalysisDialog();
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('分析超時，請稍後再試'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    });
+    final session = Completer<void>();
+    _analysisCompleter = session;
 
     // 顯示分析中的對話框
     showDialog(
@@ -353,57 +332,9 @@ class _DietScreenState extends State<DietScreen> {
       }
 
       // 準備提示詞 - 嚴格檢查是否為食物
-      final prompt =
-'''
-你是一位嚴格的營養師，請分析食物的熱量和營養成分。
-你必須非常嚴格地檢查使用者輸入的內容是否真的是食物或飲料。
+      final response = await AIService.instance.analyzeFoodByName(foodName, mealType);
 
-**嚴格規則：**
-1. 如果輸入的內容明顯不是食物或飲料（例如：物品、概念、動物、自然現象等），
-   必須立即返回以下 JSON 格式：
-{
-  "is_food": false,
-  "error_message": "這不是食物或飲料名稱。請輸入真實的食物，例如：水果、蔬菜、肉類、飲料等。",
-  "suggestions": "建議輸入具體的食物名稱，如：蘋果、雞胸肉、牛肉麵、巧克力蛋糕、鮮奶茶等。"
-}
-
-2. 如果輸入是模糊的或不確定的，也視為非食物。
-
-3. 只有當輸入是明確的食物或飲料時，才進行營養分析。
-
-**食物判斷準則：**
-- 明顯不是食物：手機、電腦、書本、愛情、夢想、數學、太陽、月亮、貓、狗等
-- 可能是食物但不確定：需要具體詢問
-- 明確是食物：各種食材、菜餚、飲料、點心、水果、蔬菜等
-
-**如果確定是食物，請返回以下 JSON 格式：**
-{
-  "is_food": true,
-  "food_name": "食物名稱",
-  "estimated_calories": 400,
-  "protein_g": 14.0,
-  "carbs_g": 60.0,
-  "fat_g": 10.0,
-  "health_score": 6,
-  "suggestions": "飲食建議文字",
-  "estimated_portion": "一碗",
-  "category": "主食"
-}
-
-**請嚴格分析以下輸入：**
-使用者輸入：$foodName
-餐別：$mealType
-
-**重要：如果你有任何懷疑這不是食物，就必須返回 is_food: false！**
-''';
-
-      // 設定超時時間
-      final response = await AIService.instance
-          .generateResponse(prompt)
-          .timeout(const Duration(seconds: 15));
-
-
-      if (!mounted) return;
+      if (!mounted || !identical(_analysisCompleter, session) || !_isAnalyzing) return;
       // 解析 AI 回應
       _currentAnalysisResult = _parseAIResponse(response, foodName, mealType);
 
@@ -425,25 +356,18 @@ class _DietScreenState extends State<DietScreen> {
       _closeAnalysisDialog();
       _showTextAnalysisResult(analysisResult, foodName, mealType);
     } on TimeoutException catch (_) {
-      if (mounted) {
+      if (mounted && identical(_analysisCompleter, session) && _isAnalyzing) {
         _closeAnalysisDialog();
         _showErrorDialog(this.context, '分析超時，請檢查網路連線後重試');
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && identical(_analysisCompleter, session) && _isAnalyzing) {
         _closeAnalysisDialog();
         _showErrorDialog(this.context, e.toString());
       }
     } finally {
-      // 取消超時計時器
-      _analysisTimeoutTimer?.cancel();
-      _analysisTimeoutTimer = null;
-
-      // 完成 Completer
-      if (_analysisCompleter?.isCompleted == false) {
-      _analysisCompleter!.complete();
-    }
-      _analysisCompleter = null;
+      if (!session.isCompleted) session.complete();
+      if (identical(_analysisCompleter, session)) _analysisCompleter = null;
 
       // Result confirmation manages its own dialog lifecycle.
     }
@@ -461,8 +385,6 @@ class _DietScreenState extends State<DietScreen> {
         }
       }
       setState(() => _isAnalyzing = false);
-      _currentFoodName = null;
-      _currentMealType = null;
       _currentAnalysisResult = null;
     }
   }
@@ -533,87 +455,8 @@ class _DietScreenState extends State<DietScreen> {
     );
   }
 
-  Map<String, dynamic> _parseAIResponse(
-    String response,
-    String foodName,
-    String mealType,
-  ) {
-    try {
-      // 清理回應，只保留 JSON 部分
-      String cleanedResponse = response.trim();
-
-
-      // 移除可能的 Markdown 語法
-      cleanedResponse = cleanedResponse.replaceAll('```json', '');
-      cleanedResponse = cleanedResponse.replaceAll('```', '');
-      cleanedResponse = cleanedResponse.replaceFirst('json', '');
-
-
-      // 確保回應是有效的 JSON
-      if (!cleanedResponse.startsWith('{')) {
-        // 嘗試找到第一個 { 和最後一個 }
-        final startIndex = cleanedResponse.indexOf('{');
-        final endIndex = cleanedResponse.lastIndexOf('}');
-        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
-          cleanedResponse = cleanedResponse.substring(startIndex, endIndex + 1);
-        }
-      }
-
-      // 解析 JSON
-      final Map<String, dynamic> result = jsonDecode(cleanedResponse);
-
-      // 檢查是否為非食物
-      final isFood = result['is_food'];
-      
-      // 處理 is_food 為 false 的情況
-      if (isFood == false || isFood == 'false') {
-        return {
-          'is_food': false,
-          'error_message': result['error_message'] ?? '這不是食物名稱，請輸入真實的食物。',
-          'suggestions': result['suggestions'] ?? '建議輸入具體的食物名稱。',
-        };
-      }
-
-      // 確保是食物，則設定為 true
-      result['is_food'] = true;
-      result['food_name'] ??= foodName;
-      result['meal_type'] = mealType;
-
-      // 使用安全的解析函式
-      result['estimated_calories'] = _safeParseInt(
-        result['estimated_calories'],
-      );
-      result['protein_g'] = _safeParseDouble(result['protein_g']);
-      result['carbs_g'] = _safeParseDouble(result['carbs_g']);
-      result['fat_g'] = _safeParseDouble(result['fat_g']);
-      result['health_score'] = _safeParseInt(
-        result['health_score'],
-        defaultValue: 5,
-      );
-
-      // 檢查數值是否為 0，如果是則可能不是食物
-      if (result['estimated_calories'] == 0 &&
-          result['protein_g'] == 0 &&
-          result['carbs_g'] == 0 &&
-          result['fat_g'] == 0) {
-        return {
-          'is_food': false,
-          'error_message': '無法辨識此圖片中的食物，請確認照片中有清晰的食物或飲料。',
-        };
-      }
-
-      // 確保其他字串欄位
-      result['suggestions'] ??= '建議均衡飲食，保持營養多樣性。';
-      result['estimated_portion'] ??= '一份';
-      result['category'] ??= '其他';
-
-      // 檢查是否有數值為 0 的情況
-
-      return result;
-    } catch (_) {
-      throw const FormatException('分析結果格式不正確，請重試，尚未新增飲食紀錄。');
-    }
-  }
+  Map<String,dynamic> _parseAIResponse(String response, String foodName, String mealType) =>
+      {...NutritionAnalysis.parse(response).toJson(), 'meal_type': mealType};
 
   Future<void> _addMealFromAnalysis(
     Map<String, dynamic> result,
@@ -1204,7 +1047,7 @@ class _DietScreenState extends State<DietScreen> {
   /// 執行圖片分析
   Future<void> _analyzeImage(File imageFile, String mealType) async {
 
-    if (!mounted) return;
+    if (!mounted || _isAnalyzing) return;
     setState(() => _isAnalyzing = true);
 
     // 顯示分析中對話框（帶動畫效果）
@@ -1249,6 +1092,7 @@ class _DietScreenState extends State<DietScreen> {
         return;
       }
 
+      setState(() => _isAnalyzing = false);
       // 顯示分析結果
       if (mounted) {
         _showImageAnalysisResult(imageFile, result, mealType);

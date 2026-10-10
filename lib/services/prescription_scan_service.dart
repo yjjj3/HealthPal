@@ -8,8 +8,11 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'ai/ai_config.dart';
+import '../models/ai/prescription_recognition.dart';
+import 'prescription_medication_mapper.dart';
+import 'ai/ai_client.dart';
+import 'ai_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/medication_model.dart';
@@ -24,9 +27,7 @@ class PrescriptionScanService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // OpenAI API 設定
-  String get _apiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
-  static const String _apiUrl = 'https://api.openai.com/v1/chat/completions';
+  final AIClient _client = AIConfig.client;
 
   // 台灣處方箋專用 Prompt
   static const String _prescriptionPrompt = '''
@@ -57,6 +58,7 @@ class PrescriptionScanService {
       "unit": "單位（顆、粒、ml、包等）",
       "frequency": "服用頻率（如：每天3次）",
       "timing": "服用時機（飯前/飯後/睡前）",
+      "route": "給藥途徑（如口服、外用，不明則為null）",
       "durationDays": 天數（數字，如無則為null）,
       "totalQuantity": 總數量（數字，如無則為null）,
       "clinicalUse": "逐字照抄圖片上的臨床用途/適應症/功效",
@@ -80,7 +82,7 @@ class PrescriptionScanService {
 - 數字欄位請確保是數字類型，不是字串
 - 日期請轉換為 YYYY-MM-DD 格式
 - 如果圖片模糊或無法辨識，請降低 confidence 值
-- 如果圖片完全無法辨識任何藥品資訊，請回傳 {"error": "無法辨識藥品資訊", "confidence": 0}
+- 完全無法辨識時 medicines=[]、confidence=0、error="無法辨識藥品資訊"；成功時 error=null。不要猜測未知劑量、頻率或單位。
 - 成藥包裝、藥袋背面的諮詢電話等資訊可放入 precautions 欄位
 ''';
 
@@ -134,64 +136,8 @@ class PrescriptionScanService {
   // ============================================================
   // 使用 OpenAI Vision API 辨識處方箋圖片
   // ============================================================
-  Future<Map<String, dynamic>> recognizePrescriptionImage(
-    File imageFile,
-  ) async {
-    try {
-      if (_apiKey.isEmpty) {
-        throw Exception('OpenAI API Key 未設定');
-      }
-
-      // 讀取圖片並轉換為 Base64
-      final bytes = await imageFile.readAsBytes();
-      final base64Image = base64Encode(bytes);
-      final mimeType = _getMimeType(imageFile.path);
-
-      debugPrint('開始辨識處方箋圖片...');
-
-      final response = await http.post(
-        Uri.parse(_apiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
-        body: jsonEncode({
-          'model': 'gpt-4o',
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {'type': 'text', 'text': _prescriptionPrompt},
-                {
-                  'type': 'image_url',
-                  'image_url': {
-                    'url': 'data:$mimeType;base64,$base64Image',
-                    'detail': 'high',
-                  },
-                },
-              ],
-            },
-          ],
-          'max_tokens': 4096,
-          'temperature': 0.1,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'] as String;
-
-        // 解析 JSON 回應
-        return _parseAIResponse(content);
-      } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception('API 錯誤: ${errorData['error']['message']}');
-      }
-    } catch (e) {
-      debugPrint('辨識處方箋失敗: $e');
-      rethrow;
-    }
-  }
+  Future<Map<String, dynamic>> recognizePrescriptionImage(File imageFile) async =>
+      recognizePrescriptionFromBytes(await imageFile.readAsBytes());
 
   // ============================================================
   // 批次辨識多張處方箋圖片
@@ -204,22 +150,10 @@ class PrescriptionScanService {
     for (int i = 0; i < imageFiles.length; i++) {
       debugPrint('辨識第 ${i + 1}/${imageFiles.length} 張圖片...');
 
-      try {
-        final result = await recognizePrescriptionImage(imageFiles[i]);
+      final result = await recognizePrescriptionImage(imageFiles[i]);
+      allMedicines.addAll((result['medicines'] as List).map((m) =>
+        PrescriptionMedicine.fromJson(m as Map<String,dynamic>)));
 
-        if (result.containsKey('medicines')) {
-          final medicinesList = result['medicines'] as List<dynamic>;
-          for (final medicineData in medicinesList) {
-            final medicine = PrescriptionMedicine.fromJson(
-              medicineData as Map<String, dynamic>,
-            );
-            allMedicines.add(medicine);
-          }
-        }
-      } catch (e) {
-        debugPrint('辨識第 ${i + 1} 張圖片失敗: $e');
-        // 繼續處理下一張
-      }
     }
 
     return allMedicines;
@@ -228,105 +162,12 @@ class PrescriptionScanService {
   // ============================================================
   // 從 Uint8List 辨識圖片（用於相機預覽）
   // ============================================================
-  Future<Map<String, dynamic>> recognizePrescriptionFromBytes(
-    Uint8List imageBytes,
-  ) async {
-    try {
-      if (_apiKey.isEmpty) {
-        throw Exception('OpenAI API Key 未設定');
-      }
-
-      final base64Image = base64Encode(imageBytes);
-
-      debugPrint('開始辨識處方箋圖片（從記憶體）...');
-
-      final response = await http.post(
-        Uri.parse(_apiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
-        },
-        body: jsonEncode({
-          'model': 'gpt-4o',
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {'type': 'text', 'text': _prescriptionPrompt},
-                {
-                  'type': 'image_url',
-                  'image_url': {
-                    'url': 'data:image/jpeg;base64,$base64Image',
-                    'detail': 'high',
-                  },
-                },
-              ],
-            },
-          ],
-          'max_tokens': 4096,
-          'temperature': 0.1,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'] as String;
-        return _parseAIResponse(content);
-      } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception('API 錯誤: ${errorData['error']['message']}');
-      }
-    } catch (e) {
-      debugPrint('辨識處方箋失敗: $e');
-      rethrow;
-    }
-  }
-
-  // ============================================================
-  // 解析 AI 回應
-  // ============================================================
-  Map<String, dynamic> _parseAIResponse(String content) {
-    try {
-      // 移除可能的 markdown 程式碼區塊標記
-      String jsonString = content.trim();
-      if (jsonString.startsWith('```json')) {
-        jsonString = jsonString.substring(7);
-      } else if (jsonString.startsWith('```')) {
-        jsonString = jsonString.substring(3);
-      }
-      if (jsonString.endsWith('```')) {
-        jsonString = jsonString.substring(0, jsonString.length - 3);
-      }
-      jsonString = jsonString.trim();
-
-      final result = jsonDecode(jsonString) as Map<String, dynamic>;
-      debugPrint('成功解析 AI 回應');
-      return result;
-    } catch (e) {
-      debugPrint('解析 AI 回應失敗: $e');
-      debugPrint('原始回應: $content');
-      return {'error': '無法解析 AI 回應', 'rawContent': content, 'confidence': 0.0};
-    }
-  }
-
-  // ============================================================
-  // 取得 MIME 類型
-  // ============================================================
-  String _getMimeType(String path) {
-    final extension = path.split('.').last.toLowerCase();
-    switch (extension) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'webp':
-        return 'image/webp';
-      default:
-        return 'image/jpeg';
-    }
+  Future<Map<String, dynamic>> recognizePrescriptionFromBytes(Uint8List imageBytes) async {
+    final image = validatedImage(imageBytes, detail: 'high');
+    final content = await _client.complete(messages: [
+      {'role': 'user', 'content': [{'type':'text','text':_prescriptionPrompt}, image]},
+    ], maxTokens: 4096, temperature: 0.1, responseFormat: PrescriptionRecognition.responseFormat);
+    return PrescriptionRecognition.parse(content).data;
   }
 
   // ============================================================
@@ -356,59 +197,9 @@ class PrescriptionScanService {
   // ============================================================
   // 將處方箋藥品轉換為用藥模型
   // ============================================================
-  Future<List<medicine>> convertToMedications(
-    List<PrescriptionMedicine> prescriptionMedicines,
-    MealTimeSettings mealTimeSettings, {
-    Map<int, String>? sources,
-  }) async {
-    final List<medicine> medications = [];
-
-    for (int i = 0; i < prescriptionMedicines.length; i++) {
-      final pm = prescriptionMedicines[i];
-      // 計算服用時間
-      final reminderTimes = mealTimeSettings.calculateReminderTimes(
-        timing: pm.timing,
-        frequency: pm.frequency,
-      );
-
-      // 解析每次劑量
-      int pillsPerDose = 1;
-      final dosageMatch = RegExp(r'(\d+)').firstMatch(pm.dosage);
-      if (dosageMatch != null) {
-        pillsPerDose = int.tryParse(dosageMatch.group(1)!) ?? 1;
-      }
-
-      final medName = (pm.name.isNotEmpty)
-          ? pm.name
-          : (pm.englishName ?? pm.name);
-      final med = medicine(
-        name: medName,
-        dosage: '${pm.dosage} ${pm.unit}',
-        unit: pm.unit,
-        total_supply: pm.totalQuantity,
-        total_pills: pillsPerDose,
-        frequency: pm.frequency,
-        times_of_day_list: reminderTimes,
-        times_status: List<bool>.filled(reminderTimes.length, false),
-        instruction: pm.timing,
-        route: pm.route,
-        remaining_days: pm.durationDays,
-        start_date: pm.startDate,
-        duration_days: pm.durationDays,
-        reminderEnabled: true,
-        source: sources?[i],
-        clinicalUse: pm.clinicalUse,
-        sideEffects: pm.sideEffects,
-        precautions: pm.precautions,
-        storageMethod: pm.storageMethod,
-        appearance: pm.appearance,
-      );
-
-      medications.add(med);
-    }
-
-    return medications;
-  }
+  Future<List<medicine>> convertToMedications(List<PrescriptionMedicine> prescriptionMedicines,
+    MealTimeSettings mealTimeSettings, {Map<int,String>? sources}) async =>
+      PrescriptionMedicationMapper.convert(prescriptionMedicines, mealTimeSettings, sources:sources);
 
   // ============================================================
   // 儲存用藥到 Firestore

@@ -153,6 +153,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
         final result = await _scanService.recognizePrescriptionImage(
           _selectedImages[i],
         );
+        if (!mounted) return;
 
         if (result.containsKey('error')) {
           debugPrint('辨識錯誤: ${result['error']}');
@@ -163,17 +164,12 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
         if (result.containsKey('medicines')) {
           final medicinesList = result['medicines'] as List<dynamic>;
           for (final medicineData in medicinesList) {
-            final medicine = PrescriptionMedicine.fromJson(
+            var medicine = PrescriptionMedicine.fromJson(
               medicineData as Map<String, dynamic>,
             );
 
-            // 如果有掃描到的藥品代碼，補充到辨識結果
-            for (final code in _scannedDrugCodes) {
-              if (medicine.drugCode.isEmpty) {
-                allMedicines.add(medicine.copyWith(drugCode: code));
-                _scannedDrugCodes.remove(code);
-                break;
-              }
+            if (medicine.drugCode.isEmpty && _scannedDrugCodes.isNotEmpty) {
+              medicine = medicine.copyWith(drugCode: _scannedDrugCodes.removeAt(0));
             }
 
             if (medicine.drugCode.isNotEmpty || medicine.name.isNotEmpty) {
@@ -193,11 +189,12 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
         allMedicines.add(PrescriptionMedicine(
           drugCode: code,
           name: '藥品代碼: $code',
-          dosage: '1',
-          unit: '顆',
-          frequency: '每天1次',
-          timing: '飯後',
-          durationDays: 7,
+          dosage: '',
+          unit: '',
+          frequency: '',
+          timing: '',
+          durationDays: 0,
+          route: '',
           totalQuantity: 0,
         ));
       }

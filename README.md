@@ -18,7 +18,7 @@
 | --- | --- |
 | UI | Flutter、Material、Google Fonts、繁體中文／英文語系 |
 | 後端 | Firebase Auth、Cloud Firestore、Firebase Storage |
-| AI | HTTP、dart_openai；程式目前設定使用 gpt-4o |
+| AI | 共用 HTTP client、嚴格 JSON schema、Firebase AI gateway；模型 gpt-4o |
 | 通知 | Firebase Messaging、flutter_local_notifications、timezone |
 | 本機資料 | SharedPreferences、flutter_secure_storage、local_auth |
 | 健康平台 | health、permission_handler |
@@ -31,12 +31,12 @@ Dart SDK 要求為 `>=3.9.0 <4.0.0`；套件版本以 `pubspec.lock` 為準。
 
 1. 安裝相容的 Flutter SDK 與目標平台工具鏈。
 2. 執行 `flutter pub get`。
-3. 執行 `cp .env.example .env`，填入自己的 `OPENAI_API_KEY`。
+3. 執行 `cp .env.development.example.json .env.development.json`，填入開發用 `OPENAI_API_KEY`；此檔不提交 Git。
 4. 在自己的 Firebase 專案啟用 Authentication、Firestore 與 Storage，透過 FlutterFire CLI 執行 `flutterfire configure`，產生 `lib/firebase_options.dart` 與平台設定。這些本機設定不提交 Git。
 5. `firebase.json` 保留原專案 FlutterFire 對應資料，請重新產生為自己的設定；部署前檢查技術文件中的規則限制，並明確指定自己的 Firebase 專案。
-6. 設定 Google／Apple 登入、相機、通知、健康平台權限，再執行 `flutter run`。
+6. 設定 Google／Apple 登入、相機、通知、健康平台權限，再執行 `flutter run --dart-define-from-file=.env.development.json`，或使用 VS Code 的「HealthPal 開發」設定。
 
-目前 `.env` 是 Flutter asset，僅適合本機開發；正式發佈前需將 API 金鑰及 AI 呼叫移至受驗證的後端。
+`.env` 已移除 Flutter assets。直接呼叫 OpenAI 僅允許 debug；正式版使用 `--dart-define=AI_GATEWAY_URL=https://...`，金鑰由 Cloud Functions Secret Manager 保管。`functions/` 已提供驗證 Firebase ID token 與限制額度的後端，部署與設定方式見技術文件。未設定端點時正式版會明確停用 AI。
 
 ## 目錄與驗證
 
@@ -47,6 +47,8 @@ flutter analyze --no-pub
 flutter test --no-pub
 ```
 
-測試涵蓋資料交易、即時分頁、初始化重試與帳號切換；Firestore 規則另以 `npm run test:rules` 在模擬器驗證。雖包含 Android、iOS、Web 與桌面平台資料夾，部分服務使用 `dart:io` 或裝置專屬套件，各平台需另外驗證。
+測試涵蓋資料交易、小數劑量、AI 回應驗證、限流與超時、即時分頁、初始化重試與帳號切換；Firestore 規則另以 `npm run test:rules` 在模擬器驗證。雖包含 Android、iOS、Web 與桌面平台資料夾，部分服務使用 `dart:io` 或裝置專屬套件，各平台需另外驗證。
 
 詳見 [技術細節](docs/TECHNICAL_DETAILS.md)。
+
+GitHub Actions 會執行靜態分析、Flutter／後端／Firestore 規則測試及 Android debug 建置。CI 使用公開 demo Firebase 設定，產出的 APK 只供建置驗證，未連接正式服務。

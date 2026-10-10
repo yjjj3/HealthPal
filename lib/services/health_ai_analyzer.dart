@@ -1,3 +1,5 @@
+import '../utils/plain_ai_text.dart';
+import '../repositories/health_context_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -60,161 +62,25 @@ class HealthAIAnalyzer {
 
     // 收集用戶資料
     final userData = await _collectUserData(uid);
+    if (_auth.currentUser?.uid != uid) throw StateError('帳號已變更，請重新分析。');
 
     // 組合 prompt
     final prompt = _buildPrompt(userData);
 
     // 呼叫 AI 取得分析結果
     final response = await _aiService.generateResponse(prompt);
+    if (_auth.currentUser?.uid != uid) throw StateError('帳號已變更。');
 
     // 清理回應中的 Markdown 格式
     return _cleanMarkdown(response);
   }
 
   /// 清理 Markdown 格式符號
-  String _cleanMarkdown(String text) {
-    return text
-        .replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '') // 移除標題符號
-        .replaceAll(RegExp(r'\*\*([^*]+)\*\*'), r'\1') // 移除粗體
-        .replaceAll(RegExp(r'\*([^*]+)\*'), r'\1') // 移除斜體
-        .replaceAll(RegExp(r'^[-*]\s+', multiLine: true), '• ') // 將列表符號改為點
-        .trim();
-  }
+  String _cleanMarkdown(String text) => plainAIText(text);
 
   /// 收集用戶所有健康相關資料
-  Future<Map<String, dynamic>> _collectUserData(String uid) async {
-    final now = DateTime.now();
-    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-    final sevenDaysAgo = now.subtract(const Duration(days: 7));
-
-    // 並行獲取所有資料
-    final results = await Future.wait([
-      _getUserProfile(uid),
-      _getHealthRecords(uid, thirtyDaysAgo),
-      _getMedicationLogs(uid, sevenDaysAgo),
-      _getDietRecords(uid, sevenDaysAgo),
-      _getMedications(uid),
-    ]);
-
-    return {
-      'profile': results[0],
-      'healthRecords': results[1],
-      'medicationLogs': results[2],
-      'dietRecords': results[3],
-      'medications': results[4],
-    };
-  }
-
-  /// 取得用戶個人資料
-  Future<Map<String, dynamic>?> _getUserProfile(String uid) async {
-    try {
-      final doc = await _firestore.collection('users').doc(uid).get();
-      return doc.data();
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// 取得健康紀錄（血壓、血糖、體重）
-  Future<List<Map<String, dynamic>>> _getHealthRecords(
-      String uid, DateTime since) async {
-    try {
-      // 先嘗試帶日期篩選的查詢
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('health_records')
-          .where('record_time', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
-          .orderBy('record_time', descending: true)
-          .limit(100)
-          .get();
-
-      return snapshot.docs.map((doc) => doc.data()).toList();
-    } catch (_) {
-      // 若帶篩選的查詢失敗（例如缺少索引），改為抓全部再客戶端篩選
-      try {
-        final snapshot = await _firestore
-            .collection('users')
-            .doc(uid)
-            .collection('health_records')
-            .get();
-
-        final allDocs = snapshot.docs.map((doc) => doc.data()).toList();
-
-        // 客戶端篩選近 30 天並依時間降序排列
-        final filtered = allDocs.where((data) {
-          final rt = data['record_time'];
-          if (rt is Timestamp) {
-            return rt.toDate().isAfter(since);
-          }
-          return false;
-        }).toList();
-
-        filtered.sort((a, b) {
-          final at = (a['record_time'] as Timestamp).toDate();
-          final bt = (b['record_time'] as Timestamp).toDate();
-          return bt.compareTo(at);
-        });
-
-        return filtered.take(100).toList();
-      } catch (e) {
-        return [];
-      }
-    }
-  }
-
-  /// 取得用藥紀錄
-  Future<List<Map<String, dynamic>>> _getMedicationLogs(
-      String uid, DateTime since) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('medication_logs')
-          .where('intake_time', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
-          .orderBy('intake_time', descending: true)
-          .limit(50)
-          .get();
-
-      return snapshot.docs.map((doc) => doc.data()).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// 取得飲食紀錄
-  Future<List<Map<String, dynamic>>> _getDietRecords(
-      String uid, DateTime since) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('diet_records')
-          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
-          .orderBy('timestamp', descending: true)
-          .limit(50)
-          .get();
-
-      return snapshot.docs.map((doc) => doc.data()).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// 取得藥物清單
-  Future<List<Map<String, dynamic>>> _getMedications(String uid) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('medicine')
-          .get();
-
-      return snapshot.docs.map((doc) => doc.data()).toList();
-    } catch (e) {
-      return [];
-    }
-  }
+  late final _contextRepository = HealthContextRepository(_firestore);
+  Future<Map<String, dynamic>> _collectUserData(String uid) => _contextRepository.collect(uid);
 
   /// 解析健康紀錄中的數值
   /// 資料格式: {category: '血壓', value: '120/80', unit: 'mmHg', ...}

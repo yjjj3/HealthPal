@@ -5,7 +5,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
@@ -47,14 +46,6 @@ void main() async {
     debugPrint('✅ 通知服務初始化成功');
   } catch (e) {
     debugPrint('❌ 通知服務初始化失敗: $e');
-  }
-
-  try {
-    // 載入環境變數（用於 AI 功能）
-    await dotenv.load(fileName: '.env');
-    debugPrint('✅ 環境變數載入成功');
-  } catch (e) {
-    debugPrint('❌ 環境變數載入失敗: $e');
   }
 
   try {

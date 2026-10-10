@@ -66,3 +66,8 @@ node_modules/
 *.p8
 *.pem
 key.properties
+
+# Local AI development credentials (never bundle or commit)
+.env.development.json
+.secret.local
+functions/.secret.local

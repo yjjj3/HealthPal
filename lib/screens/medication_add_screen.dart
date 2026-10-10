@@ -1,3 +1,4 @@
+import '../models/medication_dose.dart';
 import '../theme/app_colors.dart';
 // lib/screens/medication_add_screen.dart
 
@@ -178,7 +179,7 @@ class _MedicationAddScreenState extends State<MedicationAddScreen> {
       _syncReminderTimesLength();
 
       // 將劑量字串轉換為整數 (total_pills, 單次用藥數量)
-      final int totalPills = int.tryParse(_currentDose) ?? 1;
+      final totalPills = MedicationDose.parse(_currentDose);
 
       // 構建新的 medicine 物件
       final newMedication = medicine(
@@ -361,12 +362,7 @@ class _MedicationAddScreenState extends State<MedicationAddScreen> {
                           labelText: '每次服用劑量 (例如：1)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty || int.tryParse(value) == null || int.parse(value)! <= 0) {
-                            return '請輸入有效的正整數劑量';
-                          }
-                          return null;
-                        },
+                        validator: MedicationDose.validate,
                       ),
                     ),
                     const SizedBox(width: 8),

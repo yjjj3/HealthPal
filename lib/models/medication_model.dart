@@ -1,3 +1,4 @@
+import 'medication_dose.dart';
 // lib/models/medication_model.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,8 +8,8 @@ class medicine {
   final String name;
   final String dosage;
   final String unit;
-  final int total_supply;
-  final int total_pills;
+  final num total_supply;
+  final num total_pills;
   final String frequency;
   final List<DateTime> times_of_day_list;
   final List<bool> times_status;
@@ -55,21 +56,7 @@ class medicine {
   // 根據總劑量、頻率、單次劑量計算剩餘天數
   // ----------------------------------------------------
   int get remaining_days_calculated {
-    if (total_supply <= 0 || total_pills <= 0) return 0;
-
-    int frequencyCount = 1;
-    if (frequency.contains('1次')) {
-      frequencyCount = 1;
-    } else if (frequency.contains('2次')) {
-      frequencyCount = 2;
-    } else if (frequency.contains('3次')) {
-      frequencyCount = 3;
-    } 
-
-    int dailyDosage = frequencyCount * total_pills;
-    if (dailyDosage <= 0) return 0;
-    
-    return total_supply ~/ dailyDosage;
+    return MedicationDose.remainingDays(total_supply, total_pills, frequency);
   }
 
   // ----------------------------------------------------
@@ -125,12 +112,8 @@ class medicine {
       frequency: data['frequency'] as String? ?? '每天1次',
       instruction: data['instruction'] as String? ?? '飯後',
       route: data['route'] as String? ?? '口服',
-      total_supply: (data['total_supply'] is int)
-          ? data['total_supply'] as int
-          : (data['total_supply'] as num?)?.toInt() ?? 0,
-      total_pills: (data['total_pills'] is int)
-          ? data['total_pills'] as int
-          : (data['total_pills'] as num?)?.toInt() ?? 1,
+      total_supply: (data['total_supply'] as num?) ?? 0,
+      total_pills: (data['total_pills'] as num?) ?? 1,
       remaining_days: (data['remaining_days'] is int)
           ? data['remaining_days'] as int
           : (data['remaining_days'] as num?)?.toInt() ?? 0,
@@ -185,8 +168,8 @@ class medicine {
     String? name,
     String? dosage,
     String? unit,
-    int? total_supply,
-    int? total_pills,
+    num? total_supply,
+    num? total_pills,
     String? frequency,
     List<DateTime>? times_of_day_list,
     List<bool>? times_status,

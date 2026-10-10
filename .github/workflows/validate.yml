@@ -1,0 +1,39 @@
+name: Validate HealthPal
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.9'
+          channel: stable
+          cache: true
+      - run: python3 tool/bootstrap_ci.py
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - run: flutter test --no-pub
+      - run: npm ci && npm --prefix functions ci
+      - run: npm --prefix functions test
+      - run: npm install -g firebase-tools@15.1.0
+      - run: npm run test:rules
+      - run: flutter build apk --debug --no-pub
+      - uses: actions/upload-artifact@v4
+        with:
+          name: healthpal-debug-demo
+          path: build/app/outputs/flutter-apk/app-debug.apk

@@ -1,6 +1,7 @@
+import '../utils/plain_ai_text.dart';
+import '../repositories/health_context_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
 import 'ai_service.dart';
 
 /// AI 小助手「小安」服務
@@ -184,102 +185,9 @@ class AIAssistantService {
   }
 
   /// 收集用戶健康資料
-  Future<Map<String, dynamic>> _collectUserData(String uid) async {
-    final now = DateTime.now();
-    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-    final sevenDaysAgo = now.subtract(const Duration(days: 7));
-
-    try {
-      final results = await Future.wait([
-        _getUserProfile(uid),
-        _getHealthRecords(uid, thirtyDaysAgo),
-        _getMedicationLogs(uid, sevenDaysAgo),
-        _getDietRecords(uid, sevenDaysAgo),
-        _getMedications(uid),
-      ]);
-
-      return {
-        'profile': results[0],
-        'healthRecords': results[1],
-        'medicationLogs': results[2],
-        'dietRecords': results[3],
-        'medications': results[4],
-      };
-    } catch (e) {
-      print('❌ 收集用戶資料失敗: $e');
-      return {};
-    }
-  }
-
-  Future<Map<String, dynamic>?> _getUserProfile(String uid) async {
-    try {
-      final doc = await _firestore.collection('users').doc(uid).get();
-      return doc.data();
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _getHealthRecords(String uid, DateTime since) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('health_records')
-          .where('record_time', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
-          .orderBy('record_time', descending: true)
-          .limit(50)
-          .get();
-      return snapshot.docs.map((doc) => doc.data()).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _getMedicationLogs(String uid, DateTime since) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('medication_logs')
-          .where('intake_time', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
-          .orderBy('intake_time', descending: true)
-          .limit(30)
-          .get();
-      return snapshot.docs.map((doc) => doc.data()).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _getDietRecords(String uid, DateTime since) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('diet_records')
-          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
-          .orderBy('timestamp', descending: true)
-          .limit(30)
-          .get();
-      return snapshot.docs.map((doc) => doc.data()).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _getMedications(String uid) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(uid)
-          .collection('medicine')
-          .get();
-      return snapshot.docs.map((doc) => doc.data()).toList();
-    } catch (e) {
-      return [];
-    }
-  }
+  late final _contextRepository = HealthContextRepository(_firestore);
+  Future<Map<String, dynamic>> _collectUserData(String uid) => _contextRepository.collect(uid);
+  Future<Map<String,dynamic>?> _getUserProfile(String uid) => _contextRepository.profile(uid);
 
   /// 發送訊息給小安並取得回應
   /// [message] 用戶的訊息
@@ -296,6 +204,7 @@ class AIAssistantService {
 
     // 收集用戶健康資料
     final userData = await _collectUserData(uid);
+    if (_auth.currentUser?.uid != uid) throw StateError('帳號已變更，請重新分析。');
 
     // 建立 system prompt
     final systemPrompt = _buildSystemPrompt(userData);
@@ -327,22 +236,16 @@ class AIAssistantService {
     // 呼叫 AI 服務
     try {
       final response = await _aiService.generateConversation(messages);
+      if (_auth.currentUser?.uid != uid) throw StateError('帳號已變更。');
       return _cleanResponse(response);
     } catch (e) {
       print('❌ AI 回應失敗: $e');
-      throw Exception('小安暫時無法回應，請稍後再試');
+      rethrow;
     }
   }
 
   /// 清理 AI 回應
-  String _cleanResponse(String response) {
-    return response
-        .replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '')
-        .replaceAll(RegExp(r'\*\*([^*]+)\*\*'), r'\1')
-        .replaceAll(RegExp(r'\*([^*]+)\*'), r'\1')
-        .replaceAll(RegExp(r'^[-*]\s+', multiLine: true), '• ')
-        .trim();
-  }
+  String _cleanResponse(String text) => plainAIText(text);
 
   /// 取得小安的歡迎訊息
   Future<String> getWelcomeMessage() async {

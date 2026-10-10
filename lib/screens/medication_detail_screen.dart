@@ -1,3 +1,5 @@
+import '../utils/medication_schedule.dart';
+import '../models/medication_dose.dart';
 import '../theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../models/medication_model.dart';
@@ -284,8 +286,12 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
       
       // 1. 重新計算 dosage 字串和 total_pills
       final String finalDosage = '$_dosageNumString ${_editedMedication.unit}';
-      final int finalPills = int.tryParse(_dosageNumString) ?? 0;
-      final newTimesStatus = List<bool>.filled(_timesOfDays.length, false);
+      final finalPills = MedicationDose.parse(_dosageNumString);
+      final newTimesStatus = reconcileIntakeStatus(
+        previousTimes: _editedMedication.times_of_day_list,
+        previousStatus: _editedMedication.times_status,
+        nextTimes: _timesOfDays,
+      );
 
       // 2. 創建更新後的 medication 物件 
       final updatedMedication = _editedMedication.copyWith(
@@ -377,7 +383,7 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
                         icon: Icons.format_list_numbered,
                         keyboardType: TextInputType.number,
                         initialValue: _dosageNumString, 
-                        validator: (value) => value == null || int.tryParse(value) == null ? '請輸入有效數字' : null,
+                        validator: MedicationDose.validate,
                         onSaved: (val) {
                           _dosageNumString = val ?? '0';
                         },

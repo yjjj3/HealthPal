@@ -1,3 +1,4 @@
+import 'medication_dose.dart';
 // lib/models/prescription_model.dart
 // 處方箋資料模型
 
@@ -17,7 +18,7 @@ class PrescriptionMedicine {
   final String frequency;          // 頻率（每天幾次）
   final String timing;             // 服用時機（飯前/飯後/睡前）
   final int durationDays;          // 天數
-  final int totalQuantity;         // 總數量
+  final num totalQuantity;         // 總數量
   final String route;              // 給藥途徑
   final DateTime startDate;        // 開始日期
   final String? clinicalUse;       // 臨床用途
@@ -76,13 +77,13 @@ class PrescriptionMedicine {
       englishName: safeString(json['englishName']),
       brandName: safeString(json['brandName']),
       appearance: safeString(json['appearance']),
-      dosage: safeString(json['dosage']) ?? '1',
-      unit: safeString(json['unit']) ?? '顆',
-      frequency: safeString(json['frequency']) ?? '每天1次',
-      timing: safeString(json['timing']) ?? '飯後',
-      durationDays: safeInt(json['durationDays'], 7),
-      totalQuantity: safeInt(json['totalQuantity'], 0),
-      route: safeString(json['route']) ?? '口服',
+      dosage: safeString(json['dosage']) ?? '',
+      unit: safeString(json['unit']) ?? '',
+      frequency: safeString(json['frequency']) ?? '',
+      timing: safeString(json['timing']) ?? '',
+      durationDays: safeInt(json['durationDays'], 0),
+      totalQuantity: json['totalQuantity'] is num ? json['totalQuantity'] as num : num.tryParse(json['totalQuantity']?.toString() ?? '') ?? 0,
+      route: safeString(json['route']) ?? '',
       startDate: json['startDate'] != null ? DateTime.tryParse(json['startDate'].toString()) : null,
       clinicalUse: safeString(json['clinicalUse']),
       sideEffects: safeString(json['sideEffects']),
@@ -142,7 +143,7 @@ class PrescriptionMedicine {
       route: data['route'] as String? ?? '口服',
       startDate: data['startDate'] != null ? DateTime.tryParse(data['startDate'].toString()) ?? DateTime.now() : DateTime.now(),
       durationDays: (data['durationDays'] as num?)?.toInt() ?? 7,
-      totalQuantity: (data['totalQuantity'] as num?)?.toInt() ?? 0,
+      totalQuantity: (data['totalQuantity'] as num?) ?? 0,
       clinicalUse: data['clinicalUse'] as String?,
       sideEffects: data['sideEffects'] as String?,
       precautions: data['precautions'] as String?,
@@ -198,7 +199,7 @@ class PrescriptionMedicine {
     String? frequency,
     String? timing,
     int? durationDays,
-    int? totalQuantity,
+    num? totalQuantity,
     String? route,
     DateTime? startDate,
     String? clinicalUse,
@@ -389,57 +390,34 @@ class MealTimeSettings {
   }
 
   /// 根據服用時機計算實際提醒時間
-  List<DateTime> calculateReminderTimes({
-    required String timing,
-    required String frequency,
-  }) {
-    final List<DateTime> times = [];
-    final now = DateTime.now();
+  List<DateTime> calculateReminderTimes({required String timing, required String frequency, DateTime? baseDate}) {
+    final count = MedicationDose.frequencyPerDay(frequency);
+    if (count == 0) return [];
+    final now = baseDate ?? DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-
-    final isBefore = timing.contains('飯前') || timing.contains('餐前');
-    final isBedtime = timing.contains('睡前');
-    final int offset = isBefore ? -beforeMealMinutes : afterMealMinutes;
-
-    DateTime mealTime(TimeOfDay t) => DateTime(
-          today.year, today.month, today.day, t.hour, t.minute,
-        ).add(Duration(minutes: offset));
-
-    // 睡前：固定一次
-    if (isBedtime) {
-      times.add(DateTime(today.year, today.month, today.day, bedTime.hour, bedTime.minute));
-      return times;
+    DateTime clock(TimeOfDay t, [int offset = 0]) => DateTime(today.year,today.month,today.day,t.hour,t.minute).add(Duration(minutes:offset));
+    final hourly = RegExp(r'每(6|8|12|24)小時').firstMatch(frequency);
+    if (hourly != null) {
+      final hours = int.parse(hourly.group(1)!);
+      return List.generate(count, (i) => clock(breakfastTime).add(Duration(hours:i*hours)));
     }
-
-    // 指定餐次（早餐/午餐/晚餐）
-    if (timing.startsWith('早餐')) {
-      times.add(mealTime(breakfastTime));
-      return times;
+    final before = timing.contains('飯前') || timing.contains('餐前');
+    final after = timing.contains('飯後') || timing.contains('餐後');
+    final offset = before ? -beforeMealMinutes : after ? afterMealMinutes : 0;
+    TimeOfDay? explicit;
+    if (timing.startsWith('早餐')) explicit = breakfastTime;
+    if (timing.startsWith('午餐')) explicit = lunchTime;
+    if (timing.startsWith('晚餐')) explicit = dinnerTime;
+    if (timing.contains('睡前')) explicit = bedTime;
+    if (explicit != null) {
+      if (count != 1) throw const FormatException('服用時機與頻率不一致，請確認提醒時間。');
+      return [clock(explicit, timing.contains('睡前') ? 0 : offset)];
     }
-    if (timing.startsWith('午餐')) {
-      times.add(mealTime(lunchTime));
-      return times;
-    }
-    if (timing.startsWith('晚餐')) {
-      times.add(mealTime(dinnerTime));
-      return times;
-    }
-
-    // 未指定餐次：根據頻率決定用哪幾餐
-    int timesPerDay = 1;
-    if (frequency.contains('4次') || frequency.contains('四次')) {
-      timesPerDay = 4;
-    } else if (frequency.contains('3次') || frequency.contains('三次')) {
-      timesPerDay = 3;
-    } else if (frequency.contains('2次') || frequency.contains('二次') || frequency.contains('兩次')) {
-      timesPerDay = 2;
-    }
-
-    times.add(mealTime(breakfastTime));
-    if (timesPerDay >= 2) times.add(mealTime(dinnerTime));
-    if (timesPerDay >= 3) times.add(mealTime(lunchTime));
-    if (timesPerDay >= 4) times.add(mealTime(bedTime));
-
+    final times = [clock(breakfastTime,offset),
+      if (count >= 2) clock(dinnerTime,offset),
+      if (count >= 3) clock(lunchTime,offset),
+      if (count >= 4) clock(bedTime)];
+    times.sort();
     return times;
   }
 

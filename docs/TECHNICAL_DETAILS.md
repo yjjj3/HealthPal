@@ -6,23 +6,23 @@
 
 畫面、服務、模型、共用元件與主題分層。狀態主要使用 StatefulWidget、setState 與 StreamBuilder；部分畫面直接操作 Firestore，尚未全面抽象為 repository。
 
-main.dart 初始化 Flutter 綁定、Firebase、通知、dotenv 與截圖保護，再啟動應用。個別初始化失敗會記錄後繼續，啟動成功不代表所有後端服務就緒。AuthScreen 監聽 Firebase Auth 切換登入頁及主畫面；主導覽含儀表板、紀錄、用藥、分析、飲食及個人頁，並追蹤操作支援逾時登出。
+main.dart 初始化 Flutter 綁定、Firebase、通知與截圖保護，再啟動應用。個別初始化失敗會記錄後繼續，啟動成功不代表所有後端服務就緒。AuthScreen 監聽 Firebase Auth 切換登入頁及主畫面；主導覽含儀表板、紀錄、用藥、分析、飲食及個人頁，並追蹤操作支援逾時登出。
 
 ## 處方箋辨識流程
 
 核心為 `lib/services/prescription_scan_service.dart` 與 `lib/models/prescription_model.dart`。
 
-1. 讀取圖片檔案或 Uint8List，編碼為 Base64。
-2. HTTP POST 至程式設定的 `/v1/chat/completions`，模型 gpt-4o、圖片 detail high、temperature 0.1、max_tokens 4096。
-3. Prompt 要求回傳 medicines、hospitalInfo 與 confidence，保留副作用與注意事項原文；這是模型指示，不是正確性保證。
-4. 移除 Markdown code fence 並解析 JSON；失敗回傳 error、rawContent、confidence 0。
-5. 多張圖片依序處理，單張失敗後繼續，結果可能只含部分成功資料或為空。
-6. 確認畫面提供人工核對；依用餐時間、服用時機與頻率轉換用藥模型和提醒時間。
-7. 用藥以 Firestore batch 寫入 medicine。另有 savePrescription 方法可寫入 prescriptions，但目前未找到呼叫點，且尚未配置對應規則。
+1. 依圖片內容識別 JPEG、PNG、GIF、WebP，拒絕不支援的格式、空檔與超過 10 MiB 的輸入，再編碼為 Base64；這是格式簽章檢查，不代表完整圖片解碼驗證。
+2. 由共用 AIClient 發送請求：gpt-4o、圖片 detail high、temperature 0.1、max_tokens 4096。正式版走 Firebase AI gateway，debug 可使用本機開發金鑰。
+3. 使用 strict JSON schema，並以 PrescriptionRecognition 再驗證欄位型別、非負數量、日期與 0–1 confidence。拒絕、截斷、空白或不合法回應會回報錯誤，不保存原始回應或產生假資料。
+4. 不明劑量、頻率、時機、單位與給藥途徑保留空值，確認畫面要求人工補齊；不自動猜成每天一顆。副作用與注意事項保留模型回傳原文，仍需與原圖核對。
+5. 多張圖片依序處理；任何一張失敗都中止該批，不將部分結果當作完整辨識。
+6. PrescriptionMedicationMapper 負責轉換；MedicationDose 統一處理小數、分數、半顆與頻率。0.5 顆從建立、編輯、庫存到服藥日誌皆保留小數；不支援的複雜用法要求確認。PRN 不建立固定提醒；不明頻率不猜測。編輯時保留相同時段的服藥狀態。
+7. 用藥以 Firestore batch 寫入 medicine。另有未被畫面使用的 savePrescription 方法，prescriptions 尚未配置規則。
 
-檔案依副檔名決定 MIME，記憶體輸入固定 JPEG。沒有完整 JSON schema 驗證，confidence 未校準。劑量轉換只擷取第一段整數，0.5 顆等劑量需修正與測試。HTTP 呼叫沒有明確 timeout、重試與限流策略。
+JSON schema 只能約束格式，不能證明辨識正確；confidence 未經校準，尚未建立 OCR 正確率或藥品資料庫交叉校驗。結構化輸出依 [OpenAI 官方文件](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=chat) 設定，拒絕與截斷仍由客戶端另外處理。
 
-QR 解析支援 keyword、drugCode、code、id 參數及英數字路徑末段，未限制醫院網域。fetchDrugInfo 目前回傳 null，尚未串接正式醫院 API。
+QR 解析支援 keyword、drugCode、code、id 參數及英數字路徑末段，只接受 HTTP(S) 且不含帳密的網址，未限制醫院網域；不會直接存取該網址。fetchDrugInfo 目前回傳 null，尚未串接正式醫院 API。
 
 ## 用藥、通知與健康同步
 
@@ -90,7 +90,7 @@ AIAssistantService 與 HealthAIAnalyzer 蒐集個人資料、健康、用藥、�
 - 家庭移除一次刪除雙方關係；任何一方關係消失即停止授權。聊天室更新不可變更 members；新增訊息必須使用自己的 senderId。
 - users 基本文件仍允許所有已登入者讀取；健康或私人欄位與公開基本資料的拆分仍待後續處理。
 - Firestore 複合索引定義於 firestore.indexes.json；Storage rules 尚未納入。
-- `.env` 被打包為 Flutter asset；不提交 Git 仍無法避免從發佈的應用取得金鑰。正式版應由後端保管金鑰、驗證使用者並限制額度。
+- `.env` 不再打包。debug 開發金鑰仍可由開發 APK 取得，僅供本機使用；release/profile 不讀取此金鑰，必須設定受驗證的後端。
 - 辨識結果需人工核對，尚無完整 OCR 正確率、藥品校驗或跨平台驗證證據。
 
 ## 測試狀態
@@ -105,4 +105,34 @@ npm run test:rules
 
 規則測試使用 demo-healthpal-priority1，本機需安裝 Firebase CLI 及其支援的 Java 版本。模擬器不會部署線上規則。正式規則需在新版應用及家庭關係重新綁定流程準備好後另行部署。
 
-widget_test.dart 驗證帳號切換會清除舊導覽與頁面狀態。priority_two_test.dart 驗證即時視窗的新增、更新、刪除、載入更多、延後訂閱、釋放、分類查詢，以及初始化合併與失敗重試。真機通知、小數劑量、完整 JSON schema 與跨平台建置尚待後續驗證。
+widget_test.dart 驗證帳號切換會清除舊導覽與頁面狀態。priority_two_test.dart 驗證即時視窗的新增、更新、刪除、載入更多、延後訂閱、釋放、分類查詢，以及初始化合併與失敗重試。priority_three_test.dart 驗證小數劑量、未知處方拒絕轉換、欄位驗證、回應拒絕／截斷、HTTP 超時、限流、佇列上限、帳號切換及 AI 查詢範圍。functions/test 驗證驗證身分、額度與錯誤資訊清理。真機通知、實際 AI 辨識品質及跨平台建置仍需額外驗證。
+
+## 共用 AI 與資料結構
+
+AIService、OpenAIService 相容入口與 PrescriptionScanService 共用 AIClient／AIConfig，不再各自維護 HTTP 與金鑰狀態。提示詞、schema、資料驗證與處方轉換分開存放；既有畫面仍可使用 map adapter，並未全面重寫所有 UI 狀態管理。
+
+AIClient 同時最多 2 項工作、等候最多 8 項；每項傳送與重試共用 45 秒期限。只有明確 429 限流會等待 1–5 秒後重試一次；額度不足、逾時及其他失敗不重送。帳號變更會拒絕尚未發送的舊資料與舊結果。取消飲食分析會忽略後續結果；已傳送的遠端工作可能仍完成。
+
+NutritionAnalysis 要求真正布林值、必填文字、非負有限營養數字與 1–10 整數評分；非食物必須有說明。不再從敘述中猜 JSON，或用預設營養值補齊損壞回應。營養分析仍為模型估計，需由使用者確認。
+
+HealthContextRepository 共用有上限的查詢：健康最近 30 天最多 100 筆；服藥與飲食最近 7 天各最多 50 筆；藥品最多 100 筆。讀取失敗向上回報，不偽裝成沒有紀錄；超出範圍的歷史不會納入本次分析。
+
+## AI gateway 部署與開發設定
+
+`functions/` 使用 Node 22、Firebase Functions v2，部署區域 asia-east1。只接受非匿名 Firebase ID token，並驗證模型、訊息、圖片 data URI、token 與請求大小；不接受外部圖片網址。伺服器在 Secret Manager 讀取 OPENAI_API_KEY，錯誤回應不暴露上游文字或金鑰。
+
+Firestore 交易限額：每位使用者每分鐘 10 次、每日 50 次，整個專案每日 1000 次；日期以 UTC 計算。請求開始即計數，失敗不退還。`_ai_usage` 只有 Admin SDK 使用，客戶端規則預設拒絕。此限制控制請求數，並不等同供應商費用上限；正式運作仍需監控費用。
+
+```sh
+npm --prefix functions ci
+npm --prefix functions test
+firebase functions:secrets:set OPENAI_API_KEY --project health-management-f046a
+firebase deploy --only functions:healthpal-ai --project health-management-f046a
+flutter build apk --release --dart-define=AI_GATEWAY_URL=https://YOUR_DEPLOYED_ENDPOINT
+```
+
+部署需先完成專案的 Cloud Functions API 與必要計費設定。後端原始碼與測試已提供，端點及伺服器金鑰需在正式部署後設定；本文件不表示後端已上線。本機 debug 使用 `.env.development.json` 與 `--dart-define-from-file`，檔案被 Git 忽略；也可在 debug 設定 gateway 直接測試登入驗證。
+
+## 持續驗證
+
+`.github/workflows/validate.yml` 使用 Flutter 3.41.9、Node 22、Java 21，執行 Flutter 測試、AI gateway 測試、Firestore 規則模擬器及 Android debug 建置。靜態分析遇到 error 會失敗，既有 warning/info 尚未全部清理。`tool/bootstrap_ci.py` 僅在 CI 產生缺少的公開 demo Firebase 設定，不替換既有設定，不包含正式憑證；CI APK 不用於正式服務。

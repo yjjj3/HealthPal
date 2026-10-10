@@ -1,3 +1,5 @@
+import '../models/medication_dose.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 // lib/screens/prescription_confirm_screen.dart
 // 處方箋辨識結果確認頁面
 
@@ -73,15 +75,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
   // ============================================================
   // 刪除藥品
   // ============================================================
-  int _calcDisplayQty(PrescriptionMedicine med) {
-    if (med.totalQuantity > 0) return med.totalQuantity;
-    final dosageNum = int.tryParse(med.dosage.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
-    int timesPerDay = 1;
-    if (med.frequency.contains('4次')) { timesPerDay = 4; }
-    else if (med.frequency.contains('3次')) { timesPerDay = 3; }
-    else if (med.frequency.contains('2次')) { timesPerDay = 2; }
-    return dosageNum * timesPerDay * med.durationDays;
-  }
+  num _calcDisplayQty(PrescriptionMedicine med) => med.totalQuantity;
 
   void _deleteMedicine(int index) {
     showDialog(
@@ -123,11 +117,13 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
       return;
     }
 
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     setState(() => _isSaving = true);
 
     try {
       // 載入已儲存設定，若無則使用預設值（早餐7:30/午餐12:00/晚餐18:30）
       final settings = await _scanService.loadMealTimeSettings();
+      if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
 
       // 轉換並儲存藥品
       final medications = await _scanService.convertToMedications(
@@ -135,7 +131,9 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
         settings,
         sources: _sources,
       );
+      if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
       await _scanService.saveMedications(medications);
+      if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
 
       // 排程提醒通知
       try {
@@ -768,11 +766,12 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
       : '$_selectedMealSession$_selectedMealTiming';
 
   final List<String> _mealSessions = ['不限', '早餐', '午餐', '晚餐', '睡前'];
-  final List<String> _mealTimings = ['飯前', '飯後', '隨餐', '空腹', '不限'];
-  final List<String> _routes = ['口服', '外用', '注射', '吸入', '點眼', '栓劑', '點滴', '其他'];
+  final List<String> _mealTimings = ['請確認', '飯前', '飯後', '隨餐', '空腹', '不限'];
+  final List<String> _routes = ['請確認', '口服', '外用', '注射', '吸入', '點眼', '栓劑', '點滴', '其他'];
 
-  final List<String> _units = ['顆', '粒', 'ml', '包', '片', '錠'];
+  final List<String> _units = ['請確認', '顆', '粒', 'ml', '包', '片', '錠'];
   final List<String> _frequencies = [
+    '請確認',
     '每天1次',
     '每天2次',
     '每天3次',
@@ -790,15 +789,7 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
     _dosageController = TextEditingController(text: widget.medicine.dosage);
     // 若 AI 有給總數量就用，否則用推算值（劑量×次數×天數）
     final aiQty = widget.medicine.totalQuantity;
-    final dosageNum = int.tryParse(widget.medicine.dosage.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
-    int timesPerDay = 1;
-    final freq = widget.medicine.frequency;
-    if (freq.contains('4次')) { timesPerDay = 4; }
-    else if (freq.contains('3次')) { timesPerDay = 3; }
-    else if (freq.contains('2次')) { timesPerDay = 2; }
-    final calcQty = dosageNum * timesPerDay * widget.medicine.durationDays;
-    _totalQuantityController =
-        TextEditingController(text: '${aiQty > 0 ? aiQty : calcQty}');
+    _totalQuantityController = TextEditingController(text: '$aiQty');
     _durationController =
         TextEditingController(text: '${widget.medicine.durationDays}');
     _sourceController = TextEditingController(text: widget.initialSource ?? '');
@@ -829,8 +820,8 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
     final timingPart = sessionMatch != '不限'
         ? rawTiming.replaceFirst(sessionMatch, '')
         : rawTiming;
-    _selectedMealTiming = _mealTimings.contains(timingPart) ? timingPart : '飯後';
-    _selectedRoute = _routes.contains(widget.medicine.route) ? widget.medicine.route : '口服';
+    _selectedMealTiming = _mealTimings.contains(timingPart) ? timingPart : '請確認';
+    _selectedRoute = _routes.contains(widget.medicine.route) ? widget.medicine.route : '請確認';
     _selectedStartDate = widget.medicine.startDate;
   }
 
@@ -849,25 +840,23 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
     super.dispose();
   }
 
-  int _calcTotalQuantity() {
-    final dosageNum = int.tryParse(_dosageController.text.trim().replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
-    final duration = int.tryParse(_durationController.text.trim()) ?? 7;
-    int timesPerDay = 1;
-    if (_selectedFrequency.contains('4次')) { timesPerDay = 4; }
-    else if (_selectedFrequency.contains('3次')) { timesPerDay = 3; }
-    else if (_selectedFrequency.contains('2次')) { timesPerDay = 2; }
-    return dosageNum * timesPerDay * duration;
-  }
-
   void _save() {
+    final doseError = MedicationDose.validate(_dosageController.text);
+    final duration = int.tryParse(_durationController.text.trim());
+    final quantity = num.tryParse(_totalQuantityController.text.trim());
+    if (doseError != null || _nameController.text.trim().isEmpty || duration == null || duration < 0 || quantity == null || !quantity.isFinite || quantity < 0 ||
+      [_selectedUnit, _selectedFrequency, _selectedMealTiming, _selectedRoute].contains('請確認')) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(doseError ?? '請確認名稱、單位、頻率、時機、途徑及數量。')));
+      return;
+    }
     final updatedMedicine = widget.medicine.copyWith(
       name: _nameController.text.trim(),
       dosage: _dosageController.text.trim(),
       unit: _selectedUnit,
       frequency: _selectedFrequency,
       timing: _selectedTiming,
-      durationDays: int.tryParse(_durationController.text) ?? 7,
-      totalQuantity: int.tryParse(_totalQuantityController.text.trim()) ?? _calcTotalQuantity(),
+      durationDays: duration,
+      totalQuantity: quantity,
       clinicalUse: _clinicalUseController.text.trim().isEmpty
           ? null
           : _clinicalUseController.text.trim(),
