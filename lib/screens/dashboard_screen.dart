@@ -438,7 +438,10 @@ Widget _buildInvitationItem(Map<String, dynamic> invitation) {
     _userDataSubscription = owner.snapshots().listen((snapshot) {
       if (!active()) return;
       try {
-        setState(() { _userData = snapshot.exists ? UserModel.fromFirestore(snapshot) : null; });
+        setState(() {
+          _userData = snapshot.exists ? UserModel.fromFirestore(snapshot) : null;
+          _calculateHealthStats();
+        });
         _setupInvitationsListener(user.email, snapshot.data()?['phoneNumber'] as String?, generation);
         _sourceReady('個人資料');
       } catch (error) { _sourceReady('個人資料', error); }
