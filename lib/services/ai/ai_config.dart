@@ -17,9 +17,7 @@ class AIConfig {
         ? gateway
         : 'https://api.openai.com/v1/chat/completions',
     authorization: usesGateway ? _idToken : null,
-    currentIdentity: usesGateway
-        ? () => FirebaseAuth.instance.currentUser?.uid
-        : null,
+    currentIdentity: () => FirebaseAuth.instance.currentUser?.uid,
   );
   static Future<String> _idToken() async {
     final uri = Uri.tryParse(gateway);
