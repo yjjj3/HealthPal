@@ -169,7 +169,7 @@ struct SmallWidgetView: View {
             }
         }
         .padding()
-        .containerBackground(.fill.tertiary, for: .widget)
+        .healthWidgetBackground()
     }
 }
 
@@ -240,7 +240,7 @@ struct MediumWidgetView: View {
             .frame(maxWidth: .infinity)
         }
         .padding()
-        .containerBackground(.fill.tertiary, for: .widget)
+        .healthWidgetBackground()
     }
 }
 
@@ -259,14 +259,27 @@ struct HealthWidget: Widget {
 }
 
 // MARK: - 預覽
+@available(iOS 17.0, *)
 #Preview(as: .systemSmall) {
     HealthWidget()
 } timeline: {
     HealthEntry(date: Date(), bpSystolic: 120, bpDiastolic: 80, glucose: 95, heartRate: 72, lastUpdated: "12/27 10:00", bpTime: nil, glucoseTime: nil)
 }
 
+@available(iOS 17.0, *)
 #Preview(as: .systemMedium) {
     HealthWidget()
 } timeline: {
     HealthEntry(date: Date(), bpSystolic: 135, bpDiastolic: 85, glucose: 110, heartRate: 75, lastUpdated: "12/27 10:00", bpTime: "12/27 08:30", glucoseTime: "12/27 07:00")
+}
+
+private extension View {
+    @ViewBuilder
+    func healthWidgetBackground() -> some View {
+        if #available(iOS 17.0, *) {
+            containerBackground(.fill.tertiary, for: .widget)
+        } else {
+            background(Color(uiColor: .tertiarySystemBackground))
+        }
+    }
 }
