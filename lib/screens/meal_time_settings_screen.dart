@@ -2,6 +2,9 @@
 // 用餐時間設定頁面
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/medication_model.dart';
+import '../utils/account_page_session.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimensions.dart';
 import '../models/prescription_model.dart';
@@ -24,7 +27,10 @@ class MealTimeSettingsScreen extends StatefulWidget {
 
 class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
   final PrescriptionScanService _scanService = PrescriptionScanService();
-  final NotificationService _notificationService = NotificationService();
+  late final AccountPageSession _session;
+  String? get _ownerUid => _session.ownerUid;
+  List<medicine>? _pendingMedications;
+  bool get _active => mounted && _session.active;
 
   late MealTimeSettings _settings;
   bool _isLoading = true;
@@ -33,11 +39,22 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _session = AccountPageSession(
+      () => FirebaseAuth.instance.currentUser?.uid,
+      FirebaseAuth.instance.authStateChanges().map((u) => u?.uid),
+    );
+    _session.addListener(() {
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        if (mounted) setState(() {});
+      }
+    });
     _loadSettings();
   }
 
   Future<void> _loadSettings() async {
     final settings = await _scanService.loadMealTimeSettings();
+    if (!mounted || !_active) return;
     setState(() {
       _settings = settings;
       _isLoading = false;
@@ -45,6 +62,7 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
   }
 
   Future<void> _selectTime(String mealType) async {
+    if (!_active || _isSaving || _pendingMedications != null) return;
     TimeOfDay initialTime;
     switch (mealType) {
       case 'breakfast':
@@ -80,7 +98,7 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
       },
     );
 
-    if (picked != null) {
+    if (picked != null && _active && _pendingMedications == null) {
       setState(() {
         switch (mealType) {
           case 'breakfast':
@@ -101,6 +119,7 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
   }
 
   Future<void> _skipAndSaveWithoutReminders() async {
+    if (!_active || _isSaving) return;
     setState(() {
       _isSaving = true;
     });
@@ -111,11 +130,18 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
         _settings,
         sources: null,
       );
-      await _scanService.saveMedications(
+      if (!mounted || !_active) return;
+      _pendingMedications ??= _scanService.prepareMedications(
         medications.map((m) => m.copyWith(reminderEnabled: false)).toList(),
       );
+      await _scanService.saveMedications(
+        _pendingMedications!,
+        expectedUid: _ownerUid,
+        isActive: () => _active,
+      );
+      if (!mounted || !_active) return;
 
-      if (mounted) {
+      if (mounted && _active) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(
@@ -130,13 +156,13 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
           ),
         );
         await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
+        if (mounted && _active) {
           Navigator.popUntil(context, (route) => route.isFirst);
         }
       }
     } catch (e) {
       debugPrint('儲存失敗: $e');
-      if (mounted) {
+      if (mounted && _active) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('儲存失敗: $e'), backgroundColor: Colors.red),
         );
@@ -150,12 +176,17 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
   }
 
   Future<void> _saveSettingsOnly() async {
+    if (!_active || _isSaving) return;
     setState(() {
       _isSaving = true;
     });
     try {
-      await _scanService.saveMealTimeSettings(_settings);
-      if (mounted) {
+      await _scanService.saveMealTimeSettings(
+        _settings,
+        expectedUid: _ownerUid,
+      );
+      if (!mounted || !_active) return;
+      if (mounted && _active) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('用餐時間設定已儲存'),
@@ -166,7 +197,7 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && _active) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('儲存失敗: $e'), backgroundColor: Colors.red),
         );
@@ -180,13 +211,18 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
   }
 
   Future<void> _saveAndCreateReminders() async {
+    if (!_active || _isSaving) return;
     setState(() {
       _isSaving = true;
     });
 
     try {
       // 1. 儲存用餐時間設定
-      await _scanService.saveMealTimeSettings(_settings);
+      await _scanService.saveMealTimeSettings(
+        _settings,
+        expectedUid: _ownerUid,
+      );
+      if (!mounted || !_active) return;
 
       // 2. 將處方箋藥品轉換為用藥模型
       final medications = await _scanService.convertToMedications(
@@ -196,9 +232,17 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
       );
 
       // 3. 儲存藥品到 Firestore
-      await _scanService.saveMedications(medications);
+      if (!mounted || !_active) return;
+      _pendingMedications ??= _scanService.prepareMedications(medications);
+      await _scanService.saveMedications(
+        _pendingMedications!,
+        expectedUid: _ownerUid,
+        isActive: () => _active,
+      );
+      if (!mounted || !_active) return;
 
       // Medication reminders are rebuilt by the account-level listener.
+      var reminderFailed = false;
       try {
         // 5. 回診提醒
         if (widget.hospitalInfo != null &&
@@ -215,7 +259,7 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
               9,
               0,
             );
-            await _notificationService.scheduleHealthReminder(
+            await NotificationService().scheduleHealthReminder(
               id: 'followup_${followUpDate.millisecondsSinceEpoch}'.hashCode,
               type: 'follow_up',
               scheduledTime: reminderTime,
@@ -223,11 +267,12 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
           }
         }
       } catch (e) {
-        debugPrint('排程通知時發生錯誤: $e');
+        reminderFailed = true;
+        debugPrint('排程通知時發生錯誤: ${e.runtimeType}');
       }
 
-      if (mounted) {
-        const msg = '藥品已成功加入用藥清單！';
+      if (mounted && _active) {
+        final msg = reminderFailed ? '藥品已儲存，但回診提醒排程失敗。' : '藥品已成功加入用藥清單！';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -242,13 +287,13 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
           ),
         );
         await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
+        if (mounted && _active) {
           Navigator.popUntil(context, (route) => route.isFirst);
         }
       }
     } catch (e) {
       debugPrint('儲存失敗: $e');
-      if (mounted) {
+      if (mounted && _active) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -267,7 +312,16 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
   }
 
   @override
+  void dispose() {
+    _session.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_session.active) {
+      return const Scaffold(body: Center(child: Text('帳號已變更，請返回重新開啟設定。')));
+    }
     if (_isLoading) {
       return const Scaffold(
         body: Center(

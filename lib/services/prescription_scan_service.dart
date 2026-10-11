@@ -252,28 +252,57 @@ class PrescriptionScanService {
   // ============================================================
   // 儲存用藥到 Firestore
   // ============================================================
-  Future<List<medicine>> saveMedications(List<medicine> medications) async {
-    final uid = _uidProvider();
-    if (uid == null) {
-      throw Exception('用戶未登入');
+  List<medicine> prepareMedications(List<medicine> medications) => medications
+      .map(
+        (med) => med.copyWith(
+          medicine_id:
+              med.medicine_id ?? _firestore.collection('reserved').doc().id,
+        ),
+      )
+      .toList();
+
+  Future<List<medicine>> saveMedications(
+    List<medicine> medications, {
+    String? expectedUid,
+    bool Function()? isActive,
+  }) async {
+    final uid = expectedUid ?? _uidProvider();
+    bool active() =>
+        uid != null && _uidProvider() == uid && (isActive?.call() ?? true);
+    if (!active()) throw StateError('帳號或頁面已變更，請重新確認處方。');
+    final prepared = prepareMedications(medications);
+    final refs = prepared
+        .map(
+          (m) => _firestore
+              .collection('users')
+              .doc(uid)
+              .collection('medicine')
+              .doc(m.medicine_id),
+        )
+        .toList();
+    if (refs.map((r) => r.id).toSet().length != refs.length) {
+      throw StateError('藥品文件 ID 重複。');
     }
-
-    final batch = _firestore.batch();
-    final medicineCollection = _firestore
-        .collection('users')
-        .doc(uid)
-        .collection('medicine');
-
-    final saved = <medicine>[];
-    for (final med in medications) {
-      final docRef = medicineCollection.doc();
-      batch.set(docRef, medicationCreationData(med, _now()));
-      saved.add(med.copyWith(medicine_id: docRef.id));
-    }
-
-    await batch.commit();
-    debugPrint('已儲存 ${medications.length} 種藥品');
-    return saved;
+    final createdAt = _now();
+    return _firestore.runTransaction((tx) async {
+      final snapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
+      for (final ref in refs) {
+        snapshots.add(await tx.get(ref));
+      }
+      if (!active()) throw StateError('帳號或頁面已變更，處方未送出。');
+      if (snapshots.any((s) => s.exists)) {
+        if (!snapshots.every((s) => s.exists)) {
+          throw StateError('處方文件不完整，請核對用藥清單。');
+        }
+        // A commit may succeed while its acknowledgement is lost. Never
+        // overwrite live stock/history when retrying the same reserved IDs.
+        return snapshots.map(medicine.fromFirestore).toList();
+      }
+      for (var i = 0; i < prepared.length; i++) {
+        tx.set(refs[i], medicationCreationData(prepared[i], createdAt));
+      }
+      return prepared;
+    });
   }
 
   // ============================================================
@@ -282,12 +311,16 @@ class PrescriptionScanService {
   static const String _mealTimeSettingsKey = 'meal_time_settings';
 
   Future<MealTimeSettings> loadMealTimeSettings() async {
+    final owner = _uidProvider();
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_mealTimeSettingsKey);
+      final uid = _uidProvider();
+      if (uid == null || uid != owner) throw StateError('帳號已變更。');
+      final jsonString = prefs.getString('${_mealTimeSettingsKey}_$uid');
 
       if (jsonString != null) {
         final json = jsonDecode(jsonString) as Map<String, dynamic>;
+        if (_uidProvider() != owner) throw StateError('帳號已變更。');
         return MealTimeSettings.fromJson(json);
       }
     } catch (e) {
@@ -297,11 +330,17 @@ class PrescriptionScanService {
     return MealTimeSettings(); // 回傳預設值
   }
 
-  Future<void> saveMealTimeSettings(MealTimeSettings settings) async {
+  Future<void> saveMealTimeSettings(
+    MealTimeSettings settings, {
+    String? expectedUid,
+  }) async {
+    final uid = expectedUid ?? _uidProvider();
+    if (uid == null || uid != _uidProvider()) throw StateError('帳號已變更。');
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (_uidProvider() != uid) throw StateError('帳號已變更。');
       await prefs.setString(
-        _mealTimeSettingsKey,
+        '${_mealTimeSettingsKey}_$uid',
         jsonEncode(settings.toJson()),
       );
       debugPrint('用餐時間設定已儲存');

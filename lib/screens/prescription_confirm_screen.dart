@@ -1,4 +1,6 @@
 import '../models/prescription_draft.dart';
+import '../models/medication_model.dart';
+import '../utils/account_page_session.dart';
 import '../models/medication_dose.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // lib/screens/prescription_confirm_screen.dart
@@ -15,12 +17,18 @@ class PrescriptionConfirmScreen extends StatefulWidget {
   final List<PrescriptionMedicine> medicines;
   final Map<String, dynamic>? hospitalInfo;
   final List<File> imageFiles;
+  final PrescriptionScanService? service;
+  final String? Function()? currentUid;
+  final Stream<String?>? accountChanges;
 
   const PrescriptionConfirmScreen({
     super.key,
     required this.medicines,
     this.hospitalInfo,
     required this.imageFiles,
+    this.service,
+    this.currentUid,
+    this.accountChanges,
   });
 
   @override
@@ -29,14 +37,34 @@ class PrescriptionConfirmScreen extends StatefulWidget {
 }
 
 class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
-  final PrescriptionScanService _scanService = PrescriptionScanService();
+  late final PrescriptionScanService _scanService;
+  String? get _currentUid => widget.currentUid != null
+      ? widget.currentUid!()
+      : FirebaseAuth.instance.currentUser?.uid;
   late PrescriptionDraft _draft;
   List<PrescriptionMedicine> get _medicines => _draft.medicines;
   bool _isSaving = false;
+  late final AccountPageSession _session;
+  String? get _ownerUid => _session.ownerUid;
+  List<medicine>? _pendingMedications;
 
   @override
   void initState() {
     super.initState();
+    _scanService = widget.service ?? PrescriptionScanService();
+    _session = AccountPageSession(
+      () => _currentUid,
+      widget.accountChanges ??
+          (widget.currentUid != null
+              ? const Stream.empty()
+              : FirebaseAuth.instance.authStateChanges().map((u) => u?.uid)),
+    );
+    _session.addListener(() {
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        if (mounted) setState(() {});
+      }
+    });
     _draft = PrescriptionDraft(
       widget.medicines,
       source: widget.hospitalInfo?['hospitalName'] as String?,
@@ -47,6 +75,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
   // 編輯藥品
   // ============================================================
   void _editMedicine(int index) {
+    if (_isSaving || _pendingMedications != null) return;
     final entry = _draft.entries[index];
     showModalBottomSheet(
       context: context,
@@ -56,6 +85,12 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
         medicine: entry.medicine,
         initialSource: entry.source,
         onSave: (updatedMedicine, updatedSource) {
+          if (!mounted ||
+              !_session.active ||
+              _isSaving ||
+              _pendingMedications != null) {
+            return;
+          }
           setState(() {
             _draft.update(entry, updatedMedicine, updatedSource);
           });
@@ -70,6 +105,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
   num _calcDisplayQty(PrescriptionMedicine med) => med.totalQuantity;
 
   void _deleteMedicine(int index) {
+    if (_isSaving || _pendingMedications != null) return;
     final entry = _draft.entries[index];
     showDialog(
       context: context,
@@ -83,6 +119,12 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
           ),
           TextButton(
             onPressed: () {
+              if (!mounted ||
+                  !_session.active ||
+                  _isSaving ||
+                  _pendingMedications != null) {
+                return;
+              }
               setState(() {
                 _draft.remove(entry);
               });
@@ -100,6 +142,13 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
   // 直接儲存藥品（使用已儲存或預設用餐時間）
   // ============================================================
   Future<void> _proceedToMealTimeSettings() async {
+    if (_isSaving) return;
+    if (!_session.active) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('帳號已變更，請返回重新掃描。')));
+      return;
+    }
     if (_medicines.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -110,13 +159,13 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
       return;
     }
 
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = _currentUid;
     setState(() => _isSaving = true);
 
     try {
       // 載入已儲存設定，若無則使用預設值（早餐7:30/午餐12:00/晚餐18:30）
       final settings = await _scanService.loadMealTimeSettings();
-      if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
+      if (!mounted || !_session.active || _currentUid != uid) return;
 
       // 轉換並儲存藥品
       final medications = await _scanService.convertToMedications(
@@ -124,9 +173,14 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
         settings,
         sources: _draft.sources,
       );
-      if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
-      await _scanService.saveMedications(medications);
-      if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
+      if (!mounted || !_session.active || _currentUid != uid) return;
+      _pendingMedications ??= _scanService.prepareMedications(medications);
+      await _scanService.saveMedications(
+        _pendingMedications!,
+        expectedUid: _ownerUid,
+        isActive: () => mounted && _session.active,
+      );
+      if (!mounted || !_session.active || _currentUid != uid) return;
 
       // Account-level notification listener schedules the saved document IDs.
 
@@ -158,7 +212,16 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
   }
 
   @override
+  void dispose() {
+    _session.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_session.active) {
+      return const Scaffold(body: Center(child: Text('帳號已變更，請返回重新掃描。')));
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -505,7 +568,9 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton.icon(
-                  onPressed: () => _editMedicine(index),
+                  onPressed: _isSaving || _pendingMedications != null
+                      ? null
+                      : () => _editMedicine(index),
                   icon: const Icon(Icons.edit, size: 18),
                   label: const Text('編輯'),
                   style: TextButton.styleFrom(
@@ -514,7 +579,9 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
                 ),
                 const SizedBox(width: 8),
                 TextButton.icon(
-                  onPressed: () => _deleteMedicine(index),
+                  onPressed: _isSaving || _pendingMedications != null
+                      ? null
+                      : () => _deleteMedicine(index),
                   icon: const Icon(Icons.delete, size: 18),
                   label: const Text('刪除'),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),

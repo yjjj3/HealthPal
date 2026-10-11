@@ -2,6 +2,8 @@
 // 處方箋智慧辨識主頁面
 
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/account_page_session.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_colors.dart';
@@ -29,12 +31,22 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
   final List<String> _scannedDrugCodes = [];
 
   bool _isProcessing = false;
+  late final AccountPageSession _session;
+  bool get _active => mounted && _session.active;
   String _processingStatus = '';
   double _processingProgress = 0.0;
 
   @override
   void initState() {
     super.initState();
+    _session = AccountPageSession(() => FirebaseAuth.instance.currentUser?.uid,
+        FirebaseAuth.instance.authStateChanges().map((u) => u?.uid));
+    _session.addListener(() {
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        if (mounted) setState(() {});
+      }
+    });
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
@@ -46,6 +58,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
 
   @override
   void dispose() {
+    _session.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -62,7 +75,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
           imageQuality: 90,
         );
 
-        if (image != null) {
+        if (image != null && _active) {
           setState(() {
             _selectedImages.add(File(image.path));
           });
@@ -73,7 +86,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
           imageQuality: 90,
         );
 
-        if (images.isNotEmpty) {
+        if (images.isNotEmpty && _active) {
           setState(() {
             _selectedImages.addAll(images.map((x) => File(x.path)));
           });
@@ -81,7 +94,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
       }
     } catch (e) {
       debugPrint('選擇圖片失敗: $e');
-      if (mounted) {
+      if (mounted && _active) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('選擇圖片失敗: $e'),
@@ -113,7 +126,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
       ),
     );
 
-    if (result != null) {
+    if (result != null && _active) {
       setState(() {
         _scannedDrugCodes.addAll(result);
       });
@@ -124,6 +137,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
   // 步驟三：開始 AI 辨識
   // ============================================================
   Future<void> _startRecognition() async {
+    if (!_active || _isProcessing) return;
     if (_selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -153,7 +167,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
         final result = await _scanService.recognizePrescriptionImage(
           _selectedImages[i],
         );
-        if (!mounted) return;
+        if (!mounted || !_active) return;
 
         if (result.containsKey('error')) {
           debugPrint('辨識錯誤: ${result['error']}');
@@ -206,7 +220,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
 
       await Future.delayed(const Duration(milliseconds: 500));
 
-      if (mounted) {
+      if (mounted && _active) {
         // 導航到確認頁面
         Navigator.push(
           context,
@@ -221,7 +235,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
       }
     } catch (e) {
       debugPrint('辨識失敗: $e');
-      if (mounted) {
+      if (mounted && _active) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('辨識失敗: $e'),
@@ -230,14 +244,17 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
         );
       }
     } finally {
-      setState(() {
-        _isProcessing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_session.active) { return const Scaffold(body: Center(child: Text('帳號已變更，請返回重新掃描。'))); }
     return Scaffold(
       appBar: AppBar(
         title: const Text(
