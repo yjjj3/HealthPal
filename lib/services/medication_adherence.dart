@@ -116,6 +116,7 @@ MedicationAdherence calculateMedicationAdherence(Map<String, dynamic> context) {
   }
   final states = <String, ({int sequence, bool taken})>{};
   final visibleSequences = <String, int>{};
+  final visibleOperationDates = <String, DateTime>{};
   for (final item in logs) {
     final log = item as Map;
     final id = log['medicine_id'];
@@ -134,7 +135,13 @@ MedicationAdherence calculateMedicationAdherence(Map<String, dynamic> context) {
     }
     if (at.isAfter(now) || at.isBefore(from)) continue;
     final previousSequence = visibleSequences[id] ?? 0;
-    if (sequence > previousSequence) visibleSequences[id as String] = sequence;
+    if (sequence > previousSequence) {
+      visibleSequences[id as String] = sequence;
+      visibleOperationDates[id] = at;
+    } else if (sequence == previousSequence &&
+        visibleOperationDates[id] != at) {
+      issues.add('同一交易序號的操作時間不一致');
+    }
     if (due.isAfter(now) || due.isBefore(from)) continue;
     final key = occurrenceKey(id as String, due);
     if (!expected.contains(key)) {
@@ -158,16 +165,25 @@ MedicationAdherence calculateMedicationAdherence(Map<String, dynamic> context) {
     final med = item as Map;
     final updated = contextDate(med['lastUpdated']);
     final sequence = med['intake_sequence'];
-    // When the document's last operation is within this query window, its
-    // counter must agree with the latest visible operation, even on prior days.
-    // Counters outside the window and legacy absent counters prove no gap.
-    if (sequence is int &&
-        sequence > 0 &&
-        updated != null &&
-        !updated.isBefore(from) &&
-        (updated.isAfter(now) ||
-            visibleSequences[med['medicine_id']] != sequence)) {
-      issues.add('藥品與操作紀錄的交易順序不一致或紀錄缺漏');
+    // lastUpdated also advances on daily resets; only intake_updated_at
+    // describes the operation associated with intake_sequence.
+    if (sequence is int && sequence > 0) {
+      final id = med['medicine_id'];
+      final operationAt = contextDate(med['intake_updated_at']);
+      final visible = visibleSequences[id];
+      if (operationAt == null) {
+        if (visible != sequence) {
+          issues.add('舊藥品缺少最後操作時間，無法確認紀錄完整性');
+        } else if (med['intake_updated_at'] != null) {
+          issues.add('最後操作時間格式無效');
+        }
+      } else if (operationAt.isAfter(now) ||
+          (operationAt.isBefore(from)
+              ? visible != null
+              : visible != sequence ||
+                    visibleOperationDates[id] != operationAt)) {
+        issues.add('藥品與操作紀錄的交易順序或時間不一致或紀錄缺漏');
+      }
     }
     if (updated == null || calendarDay(updated) != calendarDay(now)) continue;
     final times = med['times_of_day_list'] as List? ?? [];

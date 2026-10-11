@@ -164,6 +164,7 @@ class FirestoreService {
         'lastUpdated': Timestamp.fromDate(now),
         'intake_receipts': receipts,
         'intake_sequence': sequence,
+        'intake_updated_at': Timestamp.fromDate(now),
         if (snapshot.data()?['regimen_history'] == null)
           'regimen_history': [regimenVersion(current.toFirestore(), now)],
       });
