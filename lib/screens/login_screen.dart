@@ -1,11 +1,9 @@
+import '../services/logout_coordinator.dart';
 import 'dart:async';
 import 'dart:io';
 import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
-import '../theme/app_dimensions.dart';
 import 'package:flutter/material.dart';
 
-import '../main.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/login_security_service.dart';
@@ -13,10 +11,9 @@ import 'registration_screen.dart';
 
 const Color _primaryColor = AppColors.primary;
 const Color _accentColor = AppColors.success;
-typedef LoginScreen = AuthScreen;
 
-class AuthScreen extends StatelessWidget {
-  const AuthScreen({super.key});
+class LoginScreen extends StatelessWidget {
+  const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -61,10 +58,7 @@ class AuthScreen extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(28),
-                    child: Image.asset(
-                      'assets/icon.png',
-                      fit: BoxFit.cover,
-                    ),
+                    child: Image.asset('assets/icon.png', fit: BoxFit.cover),
                   ),
                 ),
               ),
@@ -214,10 +208,12 @@ class _LoginFormState extends State<_LoginForm> {
 
   // 生物辨識登入
   Future<void> _biometricLogin() async {
+    var attempt = _authService.sessionGeneration;
     setState(() => _isLoading = true);
 
     try {
-      final credentials = await _biometricService.authenticateAndGetCredentials();
+      final credentials = await _biometricService
+          .authenticateAndGetCredentials();
 
       if (credentials == null) {
         if (mounted) {
@@ -241,9 +237,14 @@ class _LoginFormState extends State<_LoginForm> {
       final userCredential = await _authService.signInWithEmail(
         email: email,
         password: password,
+        expectedGeneration: attempt,
       );
 
-      if (userCredential?.user != null && mounted) {
+      attempt = _authService.sessionGeneration;
+      if (userCredential?.user != null &&
+          _authService.currentUser?.uid == userCredential?.user?.uid &&
+          _authService.isCurrentAttempt(attempt) &&
+          mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$_biometricTypeName 登入成功'),
@@ -255,13 +256,11 @@ class _LoginFormState extends State<_LoginForm> {
             duration: const Duration(seconds: 2),
           ),
         );
-
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-          (Route<dynamic> route) => false,
-        );
       }
+    } on SessionOperationCancelled {
+      return;
     } catch (e) {
+      if (!_authService.isCurrentAttempt(attempt)) return;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -293,14 +292,19 @@ class _LoginFormState extends State<_LoginForm> {
 
   // 登入處理（Firebase 版本，含完整錯誤處理 + 登入次數限制）
   Future<void> _submitLogin() async {
+    var attempt = _authService.sessionGeneration;
     if (!_formKey.currentState!.validate()) return;
 
     _formKey.currentState!.save();
     final email = _email.trim();
 
     // 檢查帳號是否被鎖定
-    if (await _loginSecurityService.isAccountLocked(email)) {
-      final remainingSeconds = await _loginSecurityService.getRemainingLockoutSeconds(email);
+    final locked = await _loginSecurityService.isAccountLocked(email);
+    if (!mounted || !_authService.isCurrentAttempt(attempt)) return;
+    if (locked) {
+      final remainingSeconds = await _loginSecurityService
+          .getRemainingLockoutSeconds(email);
+      if (!mounted || !_authService.isCurrentAttempt(attempt)) return;
       setState(() {
         _isAccountLocked = true;
         _remainingLockoutSeconds = remainingSeconds;
@@ -310,7 +314,9 @@ class _LoginFormState extends State<_LoginForm> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('帳號已被暫時鎖定，請等待 ${_loginSecurityService.formatRemainingTime(remainingSeconds)}'),
+            content: Text(
+              '帳號已被暫時鎖定，請等待 ${_loginSecurityService.formatRemainingTime(remainingSeconds)}',
+            ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -330,20 +336,28 @@ class _LoginFormState extends State<_LoginForm> {
       final userCredential = await _authService.signInWithEmail(
         email: email,
         password: _password,
+        expectedGeneration: attempt,
       );
 
       // 登入成功
-      if (userCredential?.user != null && mounted) {
-        // 清除失敗記錄
-        await _loginSecurityService.recordSuccessfulLogin(email);
+      attempt = _authService.sessionGeneration;
+      if (userCredential?.user != null &&
+          _authService.currentUser?.uid == userCredential?.user?.uid &&
+          _authService.isCurrentAttempt(attempt)) {
+        // Drain existing credential writes before logout/new-account login.
+        // Retain the same biometric opt-in and credential storage policy.
+        await AuthService.logout.finishSignIn(attempt, (current) async {
+          await _loginSecurityService.recordSuccessfulLogin(email);
+          if (!current()) return;
+          final biometricEnabled = await _biometricService
+              .isBiometricLoginEnabled();
+          if (!current()) return;
+          if (biometricEnabled) {
+            await _biometricService.saveUserCredentials(email, _password);
+          }
+        });
 
-        // 檢查是否已啟用生物辨識，若啟用則儲存憑證
-        final biometricEnabled = await _biometricService.isBiometricLoginEnabled();
-        if (biometricEnabled) {
-          await _biometricService.saveUserCredentials(email, _password);
-        }
-
-        if (!mounted) return;
+        if (!mounted || !_authService.isCurrentAttempt(attempt)) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('登入成功'),
@@ -355,16 +369,14 @@ class _LoginFormState extends State<_LoginForm> {
             duration: const Duration(seconds: 2),
           ),
         );
-
-        // 導向主畫面
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-          (Route<dynamic> route) => false,
-        );
       }
+    } on SessionOperationCancelled {
+      return;
     } catch (e) {
+      if (!_authService.isCurrentAttempt(attempt)) return;
       // 記錄登入失敗
       final result = await _loginSecurityService.recordFailedAttempt(email);
+      if (!mounted || !_authService.isCurrentAttempt(attempt)) return;
 
       if (result.isLocked) {
         setState(() {
@@ -401,12 +413,19 @@ class _LoginFormState extends State<_LoginForm> {
 
   // Google 登入
   Future<void> _signInWithGoogle() async {
+    var attempt = _authService.sessionGeneration;
     setState(() => _isGoogleLoading = true);
 
     try {
-      final userCredential = await _authService.signInWithGoogle();
+      final userCredential = await _authService.signInWithGoogle(
+        expectedGeneration: attempt,
+      );
 
-      if (userCredential?.user != null && mounted) {
+      attempt = _authService.sessionGeneration;
+      if (userCredential?.user != null &&
+          _authService.currentUser?.uid == userCredential?.user?.uid &&
+          _authService.isCurrentAttempt(attempt) &&
+          mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Google 登入成功'),
@@ -418,13 +437,11 @@ class _LoginFormState extends State<_LoginForm> {
             duration: const Duration(seconds: 2),
           ),
         );
-
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-          (Route<dynamic> route) => false,
-        );
       }
+    } on SessionOperationCancelled {
+      return;
     } catch (e) {
+      if (!_authService.isCurrentAttempt(attempt)) return;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -444,12 +461,19 @@ class _LoginFormState extends State<_LoginForm> {
 
   // Apple 登入
   Future<void> _signInWithApple() async {
+    var attempt = _authService.sessionGeneration;
     setState(() => _isAppleLoading = true);
 
     try {
-      final userCredential = await _authService.signInWithApple();
+      final userCredential = await _authService.signInWithApple(
+        expectedGeneration: attempt,
+      );
 
-      if (userCredential?.user != null && mounted) {
+      attempt = _authService.sessionGeneration;
+      if (userCredential?.user != null &&
+          _authService.currentUser?.uid == userCredential?.user?.uid &&
+          _authService.isCurrentAttempt(attempt) &&
+          mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Apple 登入成功'),
@@ -461,13 +485,11 @@ class _LoginFormState extends State<_LoginForm> {
             duration: const Duration(seconds: 2),
           ),
         );
-
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-          (Route<dynamic> route) => false,
-        );
       }
+    } on SessionOperationCancelled {
+      return;
     } catch (e) {
+      if (!_authService.isCurrentAttempt(attempt)) return;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -778,8 +800,12 @@ class _LoginFormState extends State<_LoginForm> {
             height: 56,
             decoration: BoxDecoration(
               gradient: _isAccountLocked
-                  ? LinearGradient(colors: [Colors.grey.shade400, Colors.grey.shade500])
-                  : const LinearGradient(colors: [_primaryColor, Color(0xFF3A7BC8)]),
+                  ? LinearGradient(
+                      colors: [Colors.grey.shade400, Colors.grey.shade500],
+                    )
+                  : const LinearGradient(
+                      colors: [_primaryColor, Color(0xFF3A7BC8)],
+                    ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: _isAccountLocked
                   ? null
@@ -966,10 +992,6 @@ class _LoginFormState extends State<_LoginForm> {
 
   // Google 圖示
   Widget _buildGoogleIcon() {
-    return Image.asset(
-      'assets/Google_icon.png',
-      width: 22,
-      height: 22,
-    );
+    return Image.asset('assets/Google_icon.png', width: 22, height: 22);
   }
 }

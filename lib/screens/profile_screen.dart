@@ -14,7 +14,7 @@ import 'notification_setting_screen.dart';
 import 'privacy_security_screen.dart';
 import 'about_app_screen.dart';
 import 'meal_time_settings_screen.dart';
-import 'login_screen.dart';
+import '../services/auth_service.dart';
 import 'health_sync_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
@@ -465,11 +465,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             TextButton(
               child: const Text('登出', style: TextStyle(color: Colors.red)),
               onPressed: () {
-                Navigator.of(dialogContext).pop(); 
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const AuthScreen()),
-                  (Route<dynamic> route) => false, 
-                );
+                Navigator.of(dialogContext).pop();
+                AuthService.logout.signOut();
               },
             ),
           ],

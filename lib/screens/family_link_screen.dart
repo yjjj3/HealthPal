@@ -1,3 +1,6 @@
+import '../utils/account_page_session.dart';
+import '../services/family_profile_service.dart';
+import '../widgets/family_share_settings.dart';
 import '../services/family_relationship_service.dart';
 import 'dart:async';
 import '../theme/app_colors.dart';
@@ -12,6 +15,7 @@ import 'chat_room_screen.dart';
 
 // FamilyMember class 定義
 class FamilyMember {
+  final String? inviteId;
   String name;
   String relation;
   String emailOrPhone;
@@ -24,6 +28,7 @@ class FamilyMember {
   Map<String, bool> sharedData; 
 
   FamilyMember({
+    this.inviteId,
     required this.name,
     required this.relation,
     required this.emailOrPhone,
@@ -33,22 +38,22 @@ class FamilyMember {
     required this.email, // 新增
     Map<String, bool>? sharedData,
   }) : sharedData = sharedData ?? {
-    '用藥數據': true,
-    '分析數據': true,
-    '血糖數據': true,
-    '血壓數據': true,
+    '用藥': false,
+    '血糖': false,
+    '血壓': false,
   };
 
   // 從 Firestore 資料建立 FamilyMember
   factory FamilyMember.fromFirestore(Map<String, dynamic> data) {
     return FamilyMember(
+      inviteId: data['inviteId'] is String ? data['inviteId'] : null,
       name: data['name'] ?? '家庭成員',
       relation: data['relation'] ?? '家人',
-      emailOrPhone: data['email'] ?? '',
+      emailOrPhone: '',
       isOnline: data['isOnline'] ?? false,
       userId: data['userId'] ?? '',
-      email: data['email'] ?? '',
-      sharedData: Map<String, bool>.from(data['sharedData'] ?? {}),
+      email: '',
+      sharedData: FamilyProfileService.choices(data['sharedData'], FamilyProfileService.recordFields.keys),
     );
   }
 }
@@ -83,7 +88,7 @@ class _PendingInvite {
       invitedBy: data['invitedBy'] ?? '',
       inviterName: data['inviterName'] ?? '家人',
       relation: data['relation'] ?? '家人',
-      sharedData: Map<String, bool>.from(data['sharedData'] ?? {}),
+      sharedData: FamilyProfileService.choices(data['sharedData'], FamilyProfileService.recordFields.keys),
       inviteCode: data['inviteCode'],
     );
   }
@@ -94,6 +99,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
   List<FamilyMember> _members = [];
   List<_PendingInvite> _pendingInvites = [];
   bool _isLoading = true;
+  late final AccountPageSession _account;
 
   // 即時監聽的訂閱，需在 dispose() 時取消，避免每次進出此頁都多洩漏一組監聽器
   StreamSubscription<QuerySnapshot>? _familyListenerSubscription;
@@ -101,6 +107,8 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
   @override
   void initState() {
     super.initState();
+    _account = AccountPageSession(() => FirebaseAuth.instance.currentUser?.uid,
+      FirebaseAuth.instance.authStateChanges().map((user) => user?.uid));
     _loadFamilyMembers();
     _loadPendingInvites();
     _setupFamilyListener();
@@ -108,6 +116,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
 
   @override
   void dispose() {
+    _account.dispose();
     _familyListenerSubscription?.cancel();
     super.dispose();
   }
@@ -116,7 +125,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
   Future<void> _loadPendingInvites() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null || !_account.active) return;
 
       final email = user.email?.toLowerCase().trim();
       if (email == null) return;
@@ -127,7 +136,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
           .where('status', isEqualTo: 'pending')
           .get();
 
-      if (mounted) {
+      if (mounted && _account.active && user.uid == FirebaseAuth.instance.currentUser?.uid) {
         setState(() {
           _pendingInvites = query.docs.map((doc) {
             return _PendingInvite.fromFirestore(doc.id, doc.data());
@@ -143,11 +152,11 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
   Future<void> _acceptInvite(_PendingInvite invite) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null || !_account.active) return;
 
       await FamilyRelationshipService().acceptInvite(invite.docId);
 
-      if (mounted) {
+      if (mounted && _account.active && user.uid == FirebaseAuth.instance.currentUser?.uid) {
         setState(() {
           _pendingInvites.removeWhere((i) => i.docId == invite.docId);
         });
@@ -161,7 +170,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
       }
     } catch (e) {
       debugPrint('接受邀請失敗: $e');
-      if (mounted) {
+      if (mounted && _account.active) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('接受邀請失敗: $e'), backgroundColor: Colors.red),
         );
@@ -171,10 +180,12 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
 
   // 拒絕邀請
   Future<void> _declineInvite(_PendingInvite invite) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || !_account.active) return;
     try {
       await FamilyRelationshipService().declineInvite(invite.docId);
 
-      if (mounted) {
+      if (mounted && _account.active && user.uid == FirebaseAuth.instance.currentUser?.uid) {
         setState(() {
           _pendingInvites.removeWhere((i) => i.docId == invite.docId);
         });
@@ -286,11 +297,11 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
   Future<bool> _acceptByCode(String code) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return false;
+      if (user == null || !_account.active) return false;
 
       await FamilyRelationshipService().acceptInvite(code);
 
-      if (mounted) {
+      if (mounted && _account.active) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('已成功完成家庭綁定！'),
@@ -310,7 +321,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
   Future<void> _loadFamilyMembers() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null || !_account.active) return;
 
       final familyQuery = await FirebaseFirestore.instance
           .collection('users')
@@ -322,7 +333,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
         return FamilyMember.fromFirestore(doc.data());
       }).toList();
 
-      if (mounted) {
+      if (mounted && _account.active && user.uid == FirebaseAuth.instance.currentUser?.uid) {
         setState(() {
           _members = members;
           _isLoading = false;
@@ -330,7 +341,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
       }
     } catch (e) {
       print('載入家庭成員失敗: $e');
-      if (mounted) {
+      if (mounted && _account.active) {
         setState(() {
           _isLoading = false;
         });
@@ -341,7 +352,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
   // 設定即時監聽家庭成員變化
   void _setupFamilyListener() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || !_account.active) return;
 
     _familyListenerSubscription = FirebaseFirestore.instance
         .collection('users')
@@ -349,7 +360,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
         .collection('family_members')
         .snapshots()
         .listen((snapshot) {
-      if (mounted) {
+      if (mounted && _account.active && user.uid == FirebaseAuth.instance.currentUser?.uid) {
         setState(() {
           _members = snapshot.docs.map((doc) {
             return FamilyMember.fromFirestore(doc.data());
@@ -365,7 +376,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
       MaterialPageRoute(builder: (context) => const AddMemberScreen()),
     );
 
-    if (newMember != null && newMember is FamilyMember) {
+    if (mounted && _account.active && newMember != null && newMember is FamilyMember) {
       setState(() {
         _members.add(newMember);
       });
@@ -375,98 +386,19 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
     }
   }
   
-  // 顯示資料分享設定的 Modal
   void _showShareSettings(FamilyMember member) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter modalSetState) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '設定我分享給 ${member.name} 的資料',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  const Divider(height: 30, thickness: 1, color: AppColors.border),
-                  ...member.sharedData.keys.map((dataName) {
-                    return CheckboxListTile(
-                      title: Text(
-                        '分享 $dataName 數據',
-                        style: const TextStyle(fontSize: 16, color: Colors.black87),
-                      ),
-                      value: member.sharedData[dataName],
-                      onChanged: (bool? newValue) {
-                        modalSetState(() {
-                          setState(() {
-                            member.sharedData[dataName] = newValue!;
-                          });
-                          _updateSharedData(member);
-                        });
-                      },
-                      activeColor: AppColors.primary,
-                      checkColor: Colors.white,
-                    );
-                  }),
-                  const SizedBox(height: 20),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        elevation: 3,
-                      ),
-                      child: const Text(
-                        '完成設定',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom)),
-                ],
-              ),
-            );
-          },
-        );
-      },
+    showModalBottomSheet<bool>(
+      context: context, isScrollControlled: true,
+      builder: (_) => FamilyShareSettings(viewer: member.userId,
+        service: FamilyProfileService()),
     );
-  }
-
-  // 更新共享資料到 Firebase
-  Future<void> _updateSharedData(FamilyMember member) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('family_members')
-          .doc(member.userId)
-          .update({
-        'sharedData': member.sharedData,
-      });
-    } catch (e) {
-      print('更新共享資料失敗: $e');
-    }
   }
 
   // 移除家庭成員
   Future<void> _removeFamilyMember(FamilyMember member) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null || !_account.active) return;
 
       // 顯示確認對話框
       final confirmed = await showDialog<bool>(
@@ -489,15 +421,9 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
         },
       );
 
-      if (confirmed == true) {
-        final db = FirebaseFirestore.instance;
-        final batch = db.batch();
-        batch.delete(db.collection('users').doc(user.uid)
-            .collection('family_members').doc(member.userId));
-        batch.delete(db.collection('users').doc(member.userId)
-            .collection('family_members').doc(user.uid));
-        await batch.commit();
-        if (!mounted) return;
+      if (confirmed == true && mounted && _account.active && user.uid == FirebaseAuth.instance.currentUser?.uid) {
+        await FamilyProfileService().removeMember(member.userId, expectedInviteId: member.inviteId);
+        if (!mounted || !_account.active) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('已移除 ${member.name}')),
@@ -505,6 +431,7 @@ class _FamilyLinkScreenState extends State<FamilyLinkScreen> {
       }
     } catch (e) {
       print('移除家庭成員失敗: $e');
+      if (!mounted || !_account.active) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('移除失敗: $e')),
       );

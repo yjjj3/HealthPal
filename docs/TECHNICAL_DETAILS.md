@@ -10,7 +10,7 @@ Flutter 畫面、服務、模型及共用元件分層；部分畫面仍直接操
 - **處方**：圖片／AI 回應驗證後人工確認；藥品與來源共用草稿身分。固定文件 ID 與批次標記防止重試重複新增或復活已刪文件。資料儲存與通知失敗分別回報。
 - **帳號邊界**：UID 改變重建導覽、釋放監聽與快取；非同步結果驗證世代及原帳號。通知原生工作串列執行，切換帳號等待舊工作結束再清除。這些保護仍需真機及跨裝置驗證。
 
-主要資料位於 `users/{uid}/medicine`、`medication_logs`、`health_records`、`diet_records`、`settings` 與家庭／聊天集合。規則及索引版本控制；模擬器不能證明正式索引已 READY。未使用的 prescriptions 路徑、Storage 規則與公開基本資料欄位仍需個別評估，不假設所有資料已受完整保護。
+主要資料位於 `users/{uid}/medicine`、`medication_logs`、`health_records`、`diet_records`、`settings` 與家庭／聊天集合。規則及索引版本控制；模擬器不能證明正式索引已 READY。未使用的 prescriptions 路徑與 Storage 規則仍需個別評估，不假設所有資料已受完整保護。
 
 ## iOS 相容性
 
@@ -55,6 +55,8 @@ xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Debug
 | Dart 分析 | b607541 | 0 error、13 warning、368 info；既有問題未增加，分析命令因既有診斷 exit 1 |
 | GitHub Ubuntu CI | a149059 | success、artifact 0；分析／Flutter／backend／rules，不做 iOS 原生建置 |
 
+登出與家庭授權修正另於 2026-10-11，以 `df26ae3` 為基準的本機差異驗證：Flutter 162 項、backend 7 項、localhost rules 18 項通過；分析 0 error／10 warning／352 info（exit 1，無新增診斷）。完整 iPhone debug no-codesign exit 0，App／Widget 均 arm64、minimum 16、未簽署；Widget 嚴格 typecheck 通過。此結果未代表正式規則已部署或真機功能已通過。
+
 原生建置仍有既有套件及 UIScene 相容性提示；MLKit 的模擬器警告不是 device 建置失敗。編譯成功不證明登入、權限、正式服務或資料安全全面通過；未以正式健康資料／真實 AI 驗證。
 
 ## Gateway 設定
@@ -69,6 +71,14 @@ firebase deploy --only functions:healthpal-ai --project YOUR_FIREBASE_PROJECT
 
 金鑰僅存 Secret Manager；自己的 URL 填入未追蹤環境檔 AI_GATEWAY_URL，覆寫既有預設。規則／索引及登入設定另行審閱，勿將秘密放入 client 或文件。
 
+## 登出與認證邊界
+
+手動與 timeout 共用登出協調器，重複操作合併；Firebase 登出失敗保留登入狀態並顯示重試，通知清理失敗與認證成功分開呈現。只有認證變更及必要憑證儲存加入 auth 序列；Firestore 資料工作獨立守衛，離線 pending 不阻擋真正 signOut。登出及成功登入使舊資料工作失效，遲到結果不報成功；導航由 auth 狀態決定。原生通知工作排空後再清除，FCM token 更新不阻塞帳號 ready。生物辨識設定與儲存憑證策略不變；原生通知及 provider 行為仍需真機驗證。
+
+## 家庭 profile 授權
+
+完整 `users/{uid}` 僅本人可讀；每位家人獨立、預設全關的欄位投影與記錄授權，撤回清除舊值，未知／缺值不推定同意。邀請及聊天不依賴對方私密 profile；舊關係缺投影顯示未分享。規則、資料格式與需新版客戶端的切換順序見 [家庭授權](FAMILY_PROFILE_SHARING.md)，正式環境尚未切換。移除／拒絕使用讀取前提交易，原關係與投影版本避免舊 retry 刪到重綁關係或覆蓋新撤回；取消等待不能收回已接受的伺服器提交。
+
 ## 真機待驗
 
 整 App arm64 device **編譯**已驗證；簽署、安裝／啟動、iOS 16 實際執行與原生 XCTest 尚未驗證。使用測試帳號與虛構資料檢查：
@@ -79,3 +89,4 @@ firebase deploy --only functions:healthpal-ai --project YOUR_FIREBASE_PROJECT
 4. 切換帳號時待完成的掃描、儲存、通知與 Widget 不沿用舊資料。
 5. 虛構處方確認、編輯／刪除、斷線重試：無重複或復活藥品。
 6. HealthKit、相機、登入及 App Groups 權限與 Widget 更新。
+7. 每位家人逐項分享、撤回、移除／重綁與離線重連；登出失敗及通知清理失敗提示。

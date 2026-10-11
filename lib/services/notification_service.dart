@@ -1,3 +1,4 @@
+import 'logout_coordinator.dart';
 import '../models/medication_model.dart';
 import 'medication_reminder_planner.dart';
 import '../utils/medication_schedule.dart';
@@ -39,6 +40,39 @@ class NotificationService with WidgetsBindingObserver {
   Completer<void>? _settingsReady;
   int _accountGeneration = 0;
   Future<void> _accountReady = Future.value();
+  final AccountNativeQueue _nativeWork = AccountNativeQueue();
+
+  Future<void> _runNative(Future<void> Function() operation) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final generation = _accountGeneration;
+    return _nativeWork.run(operation, isCurrent: () => uid != null
+      && uid == FirebaseAuth.instance.currentUser?.uid
+      && generation == _accountGeneration);
+  }
+
+  Future<void> clearAfterSignOut() async {
+    if (FirebaseAuth.instance.currentUser != null) throw StateError('Account changed');
+    _accountGeneration++;
+    _medicationScheduler.invalidate();
+    if (_settingsReady?.isCompleted == false) _settingsReady!.complete();
+    final settings = _settingsSubscription;
+    final medicines = _medicineSubscription;
+    _settingsSubscription = null;
+    _medicineSubscription = null;
+    _reminderMedications = null;
+    await settings?.cancel();
+    await medicines?.cancel();
+    await _accountReady;
+    await _medicationScheduler.idle;
+    await _nativeWork.idle;
+    if (FirebaseAuth.instance.currentUser != null) throw StateError('Account changed');
+    if (!isWeb) await _localNotifications.cancelAll();
+    final prefs = await SharedPreferences.getInstance();
+    if (FirebaseAuth.instance.currentUser != null) throw StateError('Account changed');
+    await prefs.remove('notification_account_uid');
+    medicationReminderStatus.value = '已登出，通知已清除';
+  }
+
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _medicineSubscription;
   List<medicine>? _reminderMedications;
@@ -47,7 +81,7 @@ class NotificationService with WidgetsBindingObserver {
   late final MedicationReminderScheduler _medicationScheduler = MedicationReminderScheduler(
     pending: () async => (await _localNotifications.pendingNotificationRequests())
         .map((r) => PendingReminder(r.id, r.payload)).toList(),
-    cancel: (id) => _localNotifications.cancel(id),
+    cancel: (id) => _runNative(() => _localNotifications.cancel(id)),
     schedule: (id, request) => request.repeat == 0
       ? scheduleMedicationReminder(id: id, medicineName: request.medication.name,
           dosage: request.medication.dosage, scheduledTime: request.at,
@@ -146,11 +180,16 @@ class NotificationService with WidgetsBindingObserver {
     if (generation != _accountGeneration) return;
     // Drain an in-flight native call before clearing a previous account.
     await _medicationScheduler.idle;
+    await _nativeWork.idle;
     if (generation != _accountGeneration) return;
     // Preserve the same account's scheduled reminders across app restarts.
     final prefs = await SharedPreferences.getInstance();
     final previousUid = prefs.getString('notification_account_uid');
-    if (!isWeb && (user == null || previousUid != user.uid)) await _localNotifications.cancelAll();
+    if (!isWeb && (user == null || previousUid != user.uid)) {
+      await _nativeWork.run(() => _localNotifications.cancelAll(),
+        isCurrent: () => generation == _accountGeneration
+          && user?.uid == FirebaseAuth.instance.currentUser?.uid);
+    }
     if (generation != _accountGeneration) return;
     if (user == null) { await prefs.remove('notification_account_uid'); return; }
     await prefs.setString('notification_account_uid', user.uid);
@@ -187,7 +226,9 @@ class NotificationService with WidgetsBindingObserver {
         if (generation == _accountGeneration) medicationReminderStatus.value = '用藥同步失敗，可能仍使用舊排程，請重新開啟 App 同步。';
       });
     }
-    await _getAndSaveFCMToken();
+    // Token networking must not hold account readiness or logout cleanup.
+    // The existing token writer checks the captured UID before every write.
+    unawaited(_getAndSaveFCMToken());
   }
 
   // Web 平台初始化
@@ -542,9 +583,11 @@ class NotificationService with WidgetsBindingObserver {
       // 「持續提醒」模式最多 50 次
       final cancelCount = 50;
 
-      for (int i = 1; i <= cancelCount; i++) {
-        await _localNotifications.cancel(baseId + i);
-      }
+      await _runNative(() async {
+        for (int i = 1; i <= cancelCount; i++) {
+          await _localNotifications.cancel(baseId + i);
+        }
+      });
       debugPrint('✅ 已取消 $cancelCount 個漏吃提醒，基礎 ID: $baseId');
     } catch (e) {
       debugPrint('❌ 取消漏吃提醒失敗: $e');
@@ -591,13 +634,13 @@ class NotificationService with WidgetsBindingObserver {
       iOS: iosDetails,
     );
 
-    await _localNotifications.show(
+    await _runNative(() => _localNotifications.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title,
       body,
       details,
       payload: payload,
-    );
+    ));
     
     debugPrint('📱 本地通知已發送: $title');
   }
@@ -669,7 +712,7 @@ class NotificationService with WidgetsBindingObserver {
       return;
     }
 
-    await _localNotifications.zonedSchedule(
+    await _runNative(() => _localNotifications.zonedSchedule(
       id,
       '用藥提醒',
       '該服用 $medicineName $dosage 了',
@@ -679,7 +722,7 @@ class NotificationService with WidgetsBindingObserver {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: payload ?? 'medication|$medicationId',
-    );
+    ));
 
     debugPrint('✅ 已排程用藥提醒: $medicineName 於 $scheduledTime');
   }
@@ -743,7 +786,7 @@ class NotificationService with WidgetsBindingObserver {
     // 每個應服時段保留 50 個漏吃提醒 ID
     final notificationId = id + reminderCount;
 
-    await _localNotifications.zonedSchedule(
+    await _runNative(() => _localNotifications.zonedSchedule(
       notificationId,
       '漏吃提醒 #$reminderCount',
       '$medicationName ($dosage) 尚未服用，請記得服藥',
@@ -753,7 +796,7 @@ class NotificationService with WidgetsBindingObserver {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: payload ?? 'missed_dose|$medicationId|$reminderCount',
-    );
+    ));
 
     debugPrint('✅ 已排程漏吃提醒 #$reminderCount: $medicationName, ID: $notificationId');
   }
@@ -812,7 +855,7 @@ class NotificationService with WidgetsBindingObserver {
 
     final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
-    await _localNotifications.zonedSchedule(
+    await _runNative(() => _localNotifications.zonedSchedule(
       id,
       title,
       body,
@@ -822,7 +865,7 @@ class NotificationService with WidgetsBindingObserver {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
-    );
+    ));
 
     _rebuildMedicationReminders(); // Reserve capacity for this non-medication request.
     debugPrint('✅ 已排程健康提醒: $title, 時間: $scheduledTime');
@@ -832,6 +875,10 @@ class NotificationService with WidgetsBindingObserver {
   // 測試通知（所有平台）
   // ============================================================
   Future<void> sendTestNotification() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final generation = _accountGeneration;
+    await _accountReady;
+    if (uid == null || uid != FirebaseAuth.instance.currentUser?.uid || generation != _accountGeneration) return;
     debugPrint('🔔 準備發送測試通知...');
     debugPrint('🔔 當前平台: ${isWeb ? 'Web' : 'Mobile'}');
 
@@ -866,13 +913,13 @@ class NotificationService with WidgetsBindingObserver {
     final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     
     try {
-      await _localNotifications.show(
+      await _runNative(() => _localNotifications.show(
         notificationId,
         '測試通知 🎉',
         '通知功能運作正常！時間: ${DateTime.now().toString().substring(11, 19)}',
         details,
         payload: 'test_notification',
-      );
+      ));
       debugPrint('✅ 測試通知已發送成功！');
     } catch (e) {
       debugPrint('❌ 發送測試通知失敗: $e');
@@ -888,6 +935,7 @@ class NotificationService with WidgetsBindingObserver {
     if (isWeb) return;
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final generation = _accountGeneration;
+    await _runNative(() async {
     final requests = await _localNotifications.pendingNotificationRequests();
     for (final request in requests) {
       if (uid != FirebaseAuth.instance.currentUser?.uid || generation != _accountGeneration) return;
@@ -895,17 +943,18 @@ class NotificationService with WidgetsBindingObserver {
         await _localNotifications.cancel(request.id);
       }
     }
+    });
   }
 
   Future<void> cancelNotification(int id) async {
     if (isWeb) return;
-    await _localNotifications.cancel(id);
+    await _runNative(() => _localNotifications.cancel(id));
     debugPrint('🗑️ 已取消通知 ID: $id');
   }
 
   Future<void> cancelAllNotifications() async {
     if (isWeb) return;
-    await _localNotifications.cancelAll();
+    await _runNative(() => _localNotifications.cancelAll());
     debugPrint('🗑️ 已取消所有通知');
   }
 

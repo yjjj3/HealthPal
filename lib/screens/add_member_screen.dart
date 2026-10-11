@@ -1,3 +1,6 @@
+import '../services/auth_service.dart';
+import '../services/logout_coordinator.dart';
+import '../utils/account_page_session.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -52,7 +55,9 @@ class _AddMemberScreenState extends State<AddMemberScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  String _currentUserName = '';
+  final String _currentUserName = '家人';
+  late final AccountPageSession _account;
+  late final int _token;
   String _memberRelation = '父親';
   String _customRelation = '';
   bool _isCustomRelation = false;
@@ -64,13 +69,8 @@ class _AddMemberScreenState extends State<AddMemberScreen>
   final _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  // 共享資料選項
-  final Map<String, bool> _sharedData = {
-    '血糖數據': true,
-    '血壓數據': true,
-    '用藥記錄': true,
-    '健康分析': true,
-  };
+  // Binding is not consent; sharing is chosen separately for each member.
+  final Map<String, bool> _sharedData = {'血糖': false, '血壓': false, '用藥': false};
 
   final List<String> _relations = [
     '父親', '母親', '兒子', '女兒', '配偶',
@@ -81,42 +81,19 @@ class _AddMemberScreenState extends State<AddMemberScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadUserData();
+    _account = AccountPageSession(() => FirebaseAuth.instance.currentUser?.uid,
+      FirebaseAuth.instance.authStateChanges().map((user) => user?.uid));
+    _token = AuthService.logout.generation;
+    _isLoading = false;
+    _generateInviteCode();
   }
 
   @override
   void dispose() {
+    _account.dispose();
     _tabController.dispose();
     _emailController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadUserData() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-
-        if (userDoc.exists && mounted) {
-          setState(() {
-            _currentUserName = userDoc.data()?['fullName'] ?? '用戶';
-            _isLoading = false;
-          });
-          await _generateInviteCode();
-        }
-      }
-    } catch (e) {
-      debugPrint('載入用戶資料失敗: $e');
-      if (mounted) {
-        setState(() {
-          _currentUserName = '用戶';
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   /// 生成邀請碼
@@ -125,24 +102,11 @@ class _AddMemberScreenState extends State<AddMemberScreen>
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null || !_account.active) return;
 
       // 生成 6 位數邀請碼
       final random = Random();
       final code = List.generate(6, (_) => random.nextInt(10)).join();
-
-      // 檢查邀請碼是否已存在
-      final existing = await FirebaseFirestore.instance
-          .collection('family_invites')
-          .where('inviteCode', isEqualTo: code)
-          .where('status', isEqualTo: 'pending')
-          .get();
-
-      if (existing.docs.isNotEmpty) {
-        // 重新生成
-        await _generateInviteCode();
-        return;
-      }
 
       final finalRelation = _isCustomRelation ? _customRelation : _memberRelation;
 
@@ -157,12 +121,17 @@ class _AddMemberScreenState extends State<AddMemberScreen>
         expiresAt: DateTime.now().add(const Duration(days: 7)),
       );
 
-      await FirebaseFirestore.instance
-          .collection('family_invites')
-          .doc(code)
-          .set(invite.toJson());
+      await AuthService.logout.accountWork((current) async {
+        await FirebaseFirestore.instance.runTransaction((tx) async {
+          final ref = FirebaseFirestore.instance.collection('family_invites').doc(code);
+          final existing = await tx.get(ref);
+          if (!current() || !_account.active) throw SessionOperationCancelled();
+          if (existing.exists) throw StateError('邀請碼重複，請重新產生');
+          tx.set(ref, invite.toJson());
+        });
+      }, expectedGeneration: _token);
 
-      if (mounted) {
+      if (mounted && _account.active) {
         setState(() {
           _inviteCode = code;
           _isGeneratingCode = false;
@@ -170,7 +139,7 @@ class _AddMemberScreenState extends State<AddMemberScreen>
       }
     } catch (e) {
       debugPrint('生成邀請碼失敗: $e');
-      if (mounted) {
+      if (mounted && _account.active) {
         setState(() => _isGeneratingCode = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('生成邀請碼失敗: $e'), backgroundColor: Colors.red),
@@ -213,7 +182,7 @@ class _AddMemberScreenState extends State<AddMemberScreen>
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception('用戶未登入');
+      if (user == null || !_account.active) throw SessionOperationCancelled();
 
       final email = _emailController.text.toLowerCase().trim();
       final finalRelation = _isCustomRelation ? _customRelation : _memberRelation;
@@ -226,6 +195,7 @@ class _AddMemberScreenState extends State<AddMemberScreen>
           .where('status', isEqualTo: 'pending')
           .get();
 
+      if (!_account.active) throw SessionOperationCancelled();
       if (existing.docs.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -236,17 +206,23 @@ class _AddMemberScreenState extends State<AddMemberScreen>
         return;
       }
 
-      // 創建邀請
-      await FirebaseFirestore.instance.collection('family_invites').add({
-        'invitedBy': user.uid,
-        'inviterName': _currentUserName,
-        'invitedToEmail': email,
-        'relation': finalRelation,
-        'sharedData': _sharedData,
-        'status': 'pending',
-        'createdAt': FieldValue.serverTimestamp(),
-        'expiresAt': DateTime.now().add(const Duration(days: 7)),
-      });
+      // A transaction avoids an unconditional offline-queued invite write.
+      final inviteRef = FirebaseFirestore.instance.collection('family_invites').doc();
+      await AuthService.logout.accountWork((current) async {
+        await FirebaseFirestore.instance.runTransaction((tx) async {
+          final existing = await tx.get(inviteRef);
+          if (!current() || !_account.active) throw SessionOperationCancelled();
+          if (existing.exists) throw StateError('邀請已存在，請重新載入');
+          tx.set(inviteRef, {
+            'invitedBy': user.uid, 'inviterName': _currentUserName,
+            'invitedToEmail': email, 'relation': finalRelation,
+            'sharedData': _sharedData, 'status': 'pending',
+            'createdAt': FieldValue.serverTimestamp(),
+            'expiresAt': DateTime.now().add(const Duration(days: 7)),
+          });
+        });
+      }, expectedGeneration: _token);
+      if (!mounted || !_account.active) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -257,6 +233,7 @@ class _AddMemberScreenState extends State<AddMemberScreen>
 
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
+      if (!mounted || !_account.active) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('發送失敗: $e'), backgroundColor: Colors.red),
       );
@@ -406,41 +383,7 @@ class _AddMemberScreenState extends State<AddMemberScreen>
             ),
           ],
           const SizedBox(height: 16),
-          // 資料權限快速設定
-          Row(
-            children: [
-              const Text(
-                '共享資料：',
-                style: TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Wrap(
-                  spacing: 6,
-                  children: _sharedData.entries.map((e) {
-                    return FilterChip(
-                      label: Text(
-                        e.key.replaceAll('數據', '').replaceAll('記錄', ''),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: e.value ? AppColors.primary : Colors.grey,
-                        ),
-                      ),
-                      selected: e.value,
-                      onSelected: (selected) {
-                        setState(() => _sharedData[e.key] = selected);
-                      },
-                      selectedColor: AppColors.primaryLight,
-                      checkmarkColor: AppColors.primary,
-                      backgroundColor: Colors.grey.shade100,
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
+          const Text('綁定不會自動分享個人或健康資料；完成後可為每位家人逐項選擇。'),
         ],
       ),
     );
@@ -699,7 +642,7 @@ class _AddMemberScreenState extends State<AddMemberScreen>
                 _buildStep('1', '將邀請碼分享給家人'),
                 _buildStep('2', '家人開啟「HealthPal」App'),
                 _buildStep('3', '在「家人綁定」頁面輸入邀請碼'),
-                _buildStep('4', '完成綁定，開始共享健康資料'),
+                _buildStep('4', '完成綁定，再逐項設定分享資料'),
               ],
             ),
           ),

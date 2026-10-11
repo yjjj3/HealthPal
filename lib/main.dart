@@ -1,3 +1,4 @@
+import 'widgets/logout_status_boundary.dart';
 import 'widgets/account_boundary.dart';
 // lib/main.dart
 
@@ -244,6 +245,7 @@ class HealthManagementApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      builder: (context, child) => LogoutStatusBoundary(child: child!),
       initialRoute: '/',
       debugShowCheckedModeBanner: false,
       routes: {
@@ -343,12 +345,6 @@ class _MainScreenState extends State<MainScreen> {
           ),
           duration: const Duration(seconds: 4),
         ),
-      );
-
-      // 導航到登入頁面
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
       );
     }
   }

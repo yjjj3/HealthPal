@@ -1,3 +1,5 @@
+import 'logout_coordinator.dart';
+import 'notification_service.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:io';
@@ -8,6 +10,14 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:crypto/crypto.dart';
 
 class AuthService {
+  static final logout = LogoutCoordinator(
+    currentUid: () => FirebaseAuth.instance.currentUser?.uid,
+    signOutAuth: () => FirebaseAuth.instance.signOut(),
+    cleanup: () => NotificationService().clearAfterSignOut(),
+  );
+  int get sessionGeneration => logout.generation;
+  bool isCurrentAttempt(int token) => logout.isCurrent(token);
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
@@ -21,10 +31,16 @@ class AuthService {
   Future<UserCredential?> signUpWithEmail({
     required String email,
     required String password,
+    int? expectedGeneration,
   }) async {
     try {
-      UserCredential userCredential = await _auth
-          .createUserWithEmailAndPassword(email: email, password: password);
+      UserCredential userCredential = await logout.signIn(
+        (_) => _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        ),
+        expectedGeneration: expectedGeneration,
+      );
       return userCredential;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -35,11 +51,13 @@ class AuthService {
   Future<UserCredential?> signInWithEmail({
     required String email,
     required String password,
+    int? expectedGeneration,
   }) async {
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+      UserCredential userCredential = await logout.signIn(
+        (_) =>
+            _auth.signInWithEmailAndPassword(email: email, password: password),
+        expectedGeneration: expectedGeneration,
       );
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -48,9 +66,7 @@ class AuthService {
   }
 
   // 登出
-  Future<void> signOut() async {
-    await _auth.signOut();
-  }
+  Future<bool> signOut() => logout.signOut();
 
   // 發送密碼重置郵件
   Future<void> sendPasswordResetEmail(String email) async {
@@ -73,11 +89,14 @@ class AuthService {
   // ==================== Google 登入 ====================
 
   /// Google 登入
-  Future<UserCredential?> signInWithGoogle() async {
+  Future<UserCredential?> signInWithGoogle({int? expectedGeneration}) async {
+    final token = expectedGeneration ?? sessionGeneration;
+    if (!isCurrentAttempt(token)) throw SessionOperationCancelled();
     try {
       // 觸發 Google 登入流程
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
+      if (!isCurrentAttempt(token)) throw SessionOperationCancelled();
       if (googleUser == null) {
         // 用戶取消登入
         return null;
@@ -87,6 +106,7 @@ class AuthService {
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
+      if (!isCurrentAttempt(token)) throw SessionOperationCancelled();
       // 建立 Firebase 憑證
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -94,9 +114,14 @@ class AuthService {
       );
 
       // 使用憑證登入 Firebase
-      return await _auth.signInWithCredential(credential);
+      return await logout.signIn(
+        (_) => _auth.signInWithCredential(credential),
+        expectedGeneration: token,
+      );
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
+    } on SessionOperationCancelled {
+      rethrow;
     } catch (e) {
       throw 'Google 登入失敗: $e';
     }
@@ -114,8 +139,10 @@ class AuthService {
     const charset =
         '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
-        .join();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   /// 將 nonce 進行 SHA256 雜湊
@@ -126,7 +153,9 @@ class AuthService {
   }
 
   /// Apple 登入
-  Future<UserCredential?> signInWithApple() async {
+  Future<UserCredential?> signInWithApple({int? expectedGeneration}) async {
+    final token = expectedGeneration ?? sessionGeneration;
+    if (!isCurrentAttempt(token)) throw SessionOperationCancelled();
     // 只在 iOS/macOS 上支援
     if (!Platform.isIOS && !Platform.isMacOS) {
       throw 'Apple 登入僅支援 iOS 和 macOS 裝置';
@@ -146,24 +175,33 @@ class AuthService {
         nonce: nonce,
       );
 
+      if (!isCurrentAttempt(token)) throw SessionOperationCancelled();
       // 建立 Firebase 憑證
-      final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken,
-        rawNonce: rawNonce,
-      );
+      final oauthCredential = OAuthProvider(
+        'apple.com',
+      ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
 
       // 使用憑證登入 Firebase
-      final userCredential = await _auth.signInWithCredential(oauthCredential);
+      final userCredential = await logout.signIn(
+        (_) => _auth.signInWithCredential(oauthCredential),
+        expectedGeneration: token,
+      );
 
       // 如果是首次登入，更新用戶顯示名稱
-      if (appleCredential.givenName != null || appleCredential.familyName != null) {
+      if (isCurrentAttempt(sessionGeneration) &&
+          _auth.currentUser?.uid == userCredential.user?.uid &&
+          (appleCredential.givenName != null ||
+              appleCredential.familyName != null)) {
         final displayName = [
           appleCredential.familyName ?? '',
           appleCredential.givenName ?? '',
         ].where((s) => s.isNotEmpty).join();
 
         if (displayName.isNotEmpty) {
-          await userCredential.user?.updateDisplayName(displayName);
+          final completionToken = sessionGeneration;
+          await logout.finishSignIn(completionToken, (current) async {
+            if (current()) await userCredential.user?.updateDisplayName(displayName);
+          });
         }
       }
 
@@ -176,6 +214,8 @@ class AuthService {
       throw 'Apple 登入失敗: ${e.message}';
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
+    } on SessionOperationCancelled {
+      rethrow;
     } catch (e) {
       throw 'Apple 登入失敗: $e';
     }

@@ -1,3 +1,4 @@
+import '../services/logout_coordinator.dart';
 import 'dart:io';
 import '../theme/app_colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,7 +8,6 @@ import 'package:intl/intl.dart';
 import '../main.dart';
 import '../services/auth_service.dart';
 import '../utils/password_validator.dart';
-import 'login_screen.dart' hide AuthScreen;
 
 const Color _primaryColor = AppColors.primary;
 const Color _accentColor = Color(0xFF50C878);
@@ -85,7 +85,9 @@ class _RegistrationFormState extends State<_RegistrationForm> {
       final authService = AuthService();
       final userCredential = await authService.signInWithGoogle();
 
-      if (userCredential?.user != null && mounted) {
+      if (userCredential?.user != null && mounted
+          && authService.currentUser?.uid == userCredential?.user?.uid
+          && authService.isCurrentAttempt(authService.sessionGeneration)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Google 登入成功'),
@@ -97,12 +99,9 @@ class _RegistrationFormState extends State<_RegistrationForm> {
             duration: const Duration(seconds: 2),
           ),
         );
-
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-          (Route<dynamic> route) => false,
-        );
       }
+    } on SessionOperationCancelled {
+      return;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -129,7 +128,9 @@ class _RegistrationFormState extends State<_RegistrationForm> {
       final authService = AuthService();
       final userCredential = await authService.signInWithApple();
 
-      if (userCredential?.user != null && mounted) {
+      if (userCredential?.user != null && mounted
+          && authService.currentUser?.uid == userCredential?.user?.uid
+          && authService.isCurrentAttempt(authService.sessionGeneration)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Apple 登入成功'),
@@ -141,12 +142,9 @@ class _RegistrationFormState extends State<_RegistrationForm> {
             duration: const Duration(seconds: 2),
           ),
         );
-
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-          (Route<dynamic> route) => false,
-        );
       }
+    } on SessionOperationCancelled {
+      return;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -354,14 +352,18 @@ class _RegistrationFormState extends State<_RegistrationForm> {
 
       try {
         final authService = AuthService();
+        var attempt = authService.sessionGeneration;
         final userCredential = await authService.signUpWithEmail(
           email: _email.trim(),
           password: _password,
+          expectedGeneration: attempt,
         );
 
+        attempt = authService.sessionGeneration;
         final userId = userCredential?.user?.uid;
 
-        if (userId != null) {
+        if (userId != null && authService.isCurrentAttempt(attempt)
+            && authService.currentUser?.uid == userId) {
           // 準備血型資料
           String finalBloodType = _bloodType;
           if (_bloodType == '其他' && _bloodTypeOther.isNotEmpty) {
@@ -383,9 +385,12 @@ class _RegistrationFormState extends State<_RegistrationForm> {
           });
         }
 
-        if (mounted) {
+        if (mounted && authService.isCurrentAttempt(attempt)
+            && authService.currentUser?.uid == userId) {
           _showSuccessDialogAndNavigate();
         }
+      } on SessionOperationCancelled {
+        return;
       } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);

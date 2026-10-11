@@ -1,3 +1,6 @@
+import 'dart:async';
+import '../services/family_profile_service.dart';
+import '../utils/account_page_session.dart';
 import '../theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,10 +11,14 @@ import 'package:intl/intl.dart';
 /// 用於查看家人分享的健康資訊（慢性病、過敏史、健康記錄等）
 class FamilyHealthScreen extends StatefulWidget {
   final String userId; // 要查看的家庭成員的 userId
+  final FirebaseFirestore? firestore;
+  final String? Function()? currentUid;
+  final Stream<String?>? accountChanges;
 
   const FamilyHealthScreen({
     super.key,
     required this.userId,
+    this.firestore, this.currentUid, this.accountChanges,
   });
 
   @override
@@ -19,90 +26,78 @@ class FamilyHealthScreen extends StatefulWidget {
 }
 
 class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
+  late final FirebaseFirestore _firestore = widget.firestore ?? FirebaseFirestore.instance;
+  late final String? Function() _uid = widget.currentUid ??
+      (() => FirebaseAuth.instance.currentUser?.uid);
+  late final AccountPageSession _account;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSubscription;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _relationSubscription;
   Map<String, dynamic>? _userData;
   Map<String, bool>? _sharedData;
+  Map<String, dynamic> _projection = {};
+  bool _related = false;
+  String? _inviteId;
   bool _isLoading = true;
   String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    _loadFamilyMemberData();
+    _account = AccountPageSession(_uid, widget.accountChanges ??
+      FirebaseAuth.instance.authStateChanges().map((user) => user?.uid));
+    _account.addListener(_accountChanged);
+    final viewer = _account.ownerUid;
+    if (viewer == null) { _isLoading = false; _errorMessage = '您尚未登入'; return; }
+    // Observe our own relationship, not the owner's private relationship metadata.
+    _relationSubscription = _firestore.collection('users').doc(viewer)
+      .collection('family_members').doc(widget.userId)
+      .snapshots(includeMetadataChanges: true).listen((doc) {
+        if (!mounted || !_account.active) return;
+        _related = doc.exists && !doc.metadata.isFromCache;
+        _inviteId = doc.data()?['inviteId'] as String?;
+        _applyProjection();
+      }, onError: (Object _) => _clear('無法確認家庭關係，請連線重試。'));
+    _profileSubscription = _firestore.collection('users').doc(widget.userId)
+      .collection('shared_profile').doc(viewer)
+      .snapshots(includeMetadataChanges: true).listen((doc) {
+        if (!mounted || !_account.active) return;
+        _projection = !doc.metadata.isFromCache && doc.data()?['version'] == 1
+            ? doc.data()! : {};
+        _applyProjection();
+      }, onError: (Object _) => _clear('資料未分享、已撤回或無法確認權限。'));
   }
 
-  /// 載入家庭成員的資料和分享權限
-  Future<void> _loadFamilyMemberData() async {
-    try {
-      final currentUser = _auth.currentUser;
-      if (currentUser == null) {
-        setState(() {
-          _errorMessage = '您尚未登入';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      print('🔍 FamilyHealthScreen - 正在載入家庭成員資料');
-      print('   當前用戶 ID: ${currentUser.uid}');
-      print('   查看的家庭成員 ID: ${widget.userId}');
-
-      // 1. 檢查是否有家庭關係和分享權限
-      print('   檢查路徑: users/${currentUser.uid}/family_members/${widget.userId}');
-      final familyMemberDoc = await _firestore
-          .collection('users')
-          .doc(widget.userId)
-          .collection('family_members')
-          .doc(currentUser.uid)
-          .get();
-
-      if (!mounted || currentUser.uid != _auth.currentUser?.uid) return;
-      if (!familyMemberDoc.exists) {
-        print('❌ 無法找到家庭成員關係');
-        setState(() {
-          _errorMessage = '無法找到此家庭成員';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      print('✅ 找到家庭成員關係');
-      final familyData = familyMemberDoc.data()!;
-      _sharedData = Map<String, bool>.from(familyData['sharedData'] ?? {});
-      print('   分享權限: $_sharedData');
-
-      // 2. 載入家庭成員的使用者資料
-      print('   載入用戶資料: users/${widget.userId}');
-      final userDoc = await _firestore
-          .collection('users')
-          .doc(widget.userId)
-          .get();
-
-      if (!mounted || currentUser.uid != _auth.currentUser?.uid) return;
-      if (userDoc.exists) {
-        print('✅ 成功載入用戶資料');
-        final userData = userDoc.data();
-        print('   用戶姓名: ${userData?['fullName']}');
-        setState(() {
-          _userData = userData;
-          _isLoading = false;
-        });
-      } else {
-        print('❌ 用戶文檔不存在');
-        setState(() {
-          _errorMessage = '無法載入使用者資料';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = '載入資料時發生錯誤: $e';
-        _isLoading = false;
-      });
-    }
+  void _applyProjection() {
+    if (!mounted || !_account.active) return;
+    final currentGrant = _related && _inviteId != null && _projection['inviteId'] == _inviteId;
+    final consent = FamilyProfileService.choices(currentGrant ? _projection['consent'] : null,
+      FamilyProfileService.fields.keys);
+    final values = _projection['values'];
+    setState(() {
+      _userData = currentGrant && values is Map ? {
+        for (final key in FamilyProfileService.fields.keys)
+          if (consent[key] == true && values.containsKey(key)) key: values[key],
+      } : {};
+      _sharedData = FamilyProfileService.choices(currentGrant ? _projection['records'] : null,
+        FamilyProfileService.recordFields.keys);
+      _isLoading = false;
+      _errorMessage = '';
+    });
+  }
+  void _clear(String message) {
+    if (!mounted) return;
+    setState(() { _userData = {}; _sharedData = {}; _projection = {};
+      _isLoading = false; _errorMessage = message; });
+  }
+  void _accountChanged() {
+    _profileSubscription?.cancel(); _relationSubscription?.cancel();
+    _clear('帳號已變更，請返回後重新開啟。');
+  }
+  @override
+  void dispose() {
+    _profileSubscription?.cancel(); _relationSubscription?.cancel();
+    _account.dispose();
+    super.dispose();
   }
 
   @override
@@ -159,6 +154,7 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 基本資訊卡片
+          const Text('只顯示對方選擇分享的資料；個人資料為儲存分享時的副本。'),
           _buildBasicInfoCard(),
           const SizedBox(height: 16),
 
@@ -229,10 +225,14 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildInfoRow('姓名', _userData?['fullName'] ?? '未設定'),
-          _buildInfoRow('年齡', age > 0 ? '$age 歲' : '未設定'),
-          _buildInfoRow('性別', _userData?['gender'] ?? '未設定'),
-          _buildInfoRow('血型', _userData?['bloodType'] ?? '未設定'),
+          _buildInfoRow('姓名', _userData?['fullName']?.toString() ?? '未分享'),
+          _buildInfoRow('電子郵件', _userData?['email']?.toString() ?? '未分享'),
+          _buildInfoRow('電話', _userData?['phoneNumber']?.toString() ?? '未分享'),
+          _buildInfoRow('身高', _userData?['height']?.toString() ?? '未分享'),
+          _buildInfoRow('體重', _userData?['weight']?.toString() ?? '未分享'),
+          _buildInfoRow('年齡', age > 0 ? '$age 歲' : '未分享'),
+          _buildInfoRow('性別', _userData?['gender']?.toString() ?? '未分享'),
+          _buildInfoRow('血型', _userData?['bloodType']?.toString() ?? '未分享'),
         ],
       ),
     );
@@ -245,7 +245,7 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
 
     List<String> chronicDiseaseList = [];
     if (chronicDiseases is List && chronicDiseases.isNotEmpty) {
-      chronicDiseaseList = chronicDiseases.cast<String>().toList();
+      chronicDiseaseList = chronicDiseases.whereType<String>().toList();
     } else if (chronicDiseases is String && chronicDiseases.isNotEmpty) {
       chronicDiseaseList = [chronicDiseases];
     }
@@ -287,8 +287,8 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           ),
           const SizedBox(height: 8),
           chronicDiseaseList.isEmpty
-              ? const Text(
-                  '無',
+              ? Text(
+                  _userData?.containsKey('chronicDiseases') == true ? '無' : '未分享',
                   style: TextStyle(
                     fontSize: 15,
                     color: AppColors.textHint,
@@ -344,13 +344,13 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            allergies?.toString() ?? '無',
+            allergies?.toString() ?? '未分享',
             style: TextStyle(
               fontSize: 15,
-              color: (allergies?.toString() ?? '無') == '無'
+              color: (allergies?.toString() ?? '未分享') == '無'
                   ? AppColors.textHint
                   : AppColors.warning,
-              fontWeight: (allergies?.toString() ?? '無') == '無'
+              fontWeight: (allergies?.toString() ?? '未分享') == '無'
                   ? FontWeight.normal
                   : FontWeight.w500,
             ),
@@ -403,8 +403,11 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           .collection('health_records')
           .where('category', isEqualTo: categoryFilter)
           .orderBy('record_time', descending: true).limit(1)
-          .snapshots(),
+          .snapshots(includeMetadataChanges: true),
       builder: (context, snapshot) {
+        if (!_account.active || !_related || snapshot.data?.metadata.isFromCache == true) {
+          return _buildHealthRecordCard('共享資料', Icons.lock, '未分享或尚未確認權限', null);
+        }
         if (snapshot.hasError) {
           return _buildHealthRecordCard(title, icon, '無法讀取，請確認分享權限', null);
         }
@@ -530,8 +533,11 @@ class _FamilyHealthScreenState extends State<FamilyHealthScreen> {
           .collection('users')
           .doc(widget.userId)
           .collection('medicine')
-          .snapshots(),
+          .snapshots(includeMetadataChanges: true),
       builder: (context, snapshot) {
+        if (!_account.active || !_related || snapshot.data?.metadata.isFromCache == true) {
+          return _buildHealthRecordCard('共享資料', Icons.lock, '未分享或尚未確認權限', null);
+        }
         if (snapshot.hasError) {
           return _buildHealthRecordCard('用藥', Icons.medication, '無法讀取，請確認分享權限', null);
         }

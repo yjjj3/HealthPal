@@ -118,18 +118,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.dispose();
   }
 
-  // 從 Firestore 載入自己的名字
+  // Chat identity does not imply consent to disclose the private profile name.
   Future<void> _loadMyName() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-    try {
-      final doc = await _firestore.collection('users').doc(user.uid).get();
-      if (doc.exists && mounted) {
-        setState(() {
-          _myName = doc.data()?['fullName'] ?? user.displayName ?? '用戶';
-        });
-      }
-    } catch (_) {}
+    _myName = '家人';
   }
 
   // 確保聊天室存在

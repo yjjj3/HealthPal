@@ -4,7 +4,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // 檢查用戶是否已登入
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null
+        && request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous';
     }
 
     // 檢查用戶是否為資料擁有者
@@ -59,20 +60,76 @@ service cloud.firestore {
       let grantPath = /databases/$(database)/documents/users/$(owner)/family_members/$(viewer);
       let reversePath = /databases/$(database)/documents/users/$(viewer)/family_members/$(owner);
       let grant = get(grantPath).data;
+      let reverse = get(reversePath).data;
       let invite = get(/databases/$(database)/documents/family_invites/$(grant.inviteId)).data;
       return exists(grantPath) && exists(reversePath)
-        && grant.userId == viewer
+        && grant.userId == viewer && reverse.userId == owner
+        && reverse.inviteId == grant.inviteId
         && invite.status == 'accepted'
         && ((invite.invitedBy == owner && invite.acceptedBy == viewer)
           || (invite.invitedBy == viewer && invite.acceptedBy == owner));
     }
 
+    function validProfileRecords(records) {
+      return records is map && records.keys().hasOnly(['血糖', '血壓', '用藥'])
+        && records.get('血糖', false) is bool
+        && records.get('血壓', false) is bool
+        && records.get('用藥', false) is bool;
+    }
+
+    function validProfileProjection(data) {
+      return data.keys().hasOnly(['version', 'inviteId', 'consent', 'values', 'records', 'updatedAt'])
+        && data.version == 1 && data.inviteId is string && data.updatedAt is timestamp
+        && data.consent is map && data.values is map
+        && data.consent.keys().hasOnly(['fullName', 'email', 'phoneNumber', 'dateOfBirth', 'gender', 'bloodType', 'height', 'weight', 'chronicDiseases', 'allergies'])
+        && data.values.keys().hasOnly(['fullName', 'email', 'phoneNumber', 'dateOfBirth', 'gender', 'bloodType', 'height', 'weight', 'chronicDiseases', 'allergies'])
+        && validProfileRecords(data.records)
+        && data.consent.get('fullName', false) is bool
+        && (!data.values.keys().hasAny(['fullName']) || data.consent.get('fullName', false) == true)
+        && data.consent.get('email', false) is bool
+        && (!data.values.keys().hasAny(['email']) || data.consent.get('email', false) == true)
+        && data.consent.get('phoneNumber', false) is bool
+        && (!data.values.keys().hasAny(['phoneNumber']) || data.consent.get('phoneNumber', false) == true)
+        && data.consent.get('dateOfBirth', false) is bool
+        && (!data.values.keys().hasAny(['dateOfBirth']) || data.consent.get('dateOfBirth', false) == true)
+        && data.consent.get('gender', false) is bool
+        && (!data.values.keys().hasAny(['gender']) || data.consent.get('gender', false) == true)
+        && data.consent.get('bloodType', false) is bool
+        && (!data.values.keys().hasAny(['bloodType']) || data.consent.get('bloodType', false) == true)
+        && data.consent.get('height', false) is bool
+        && (!data.values.keys().hasAny(['height']) || data.consent.get('height', false) == true)
+        && data.consent.get('weight', false) is bool
+        && (!data.values.keys().hasAny(['weight']) || data.consent.get('weight', false) == true)
+        && data.consent.get('chronicDiseases', false) is bool
+        && (!data.values.keys().hasAny(['chronicDiseases']) || data.consent.get('chronicDiseases', false) == true)
+        && data.consent.get('allergies', false) is bool
+        && (!data.values.keys().hasAny(['allergies']) || data.consent.get('allergies', false) == true);
+    }
+
+    function profileMatchesOwner(owner, values) {
+      let profile = getAfter(/databases/$(database)/documents/users/$(owner)).data;
+      return (!values.keys().hasAny(['fullName']) || values.fullName == profile.get('fullName', null))
+        && (!values.keys().hasAny(['email']) || values.email == profile.get('email', null))
+        && (!values.keys().hasAny(['phoneNumber']) || values.phoneNumber == profile.get('phoneNumber', null))
+        && (!values.keys().hasAny(['dateOfBirth']) || values.dateOfBirth == profile.get('dateOfBirth', null))
+        && (!values.keys().hasAny(['gender']) || values.gender == profile.get('gender', null))
+        && (!values.keys().hasAny(['bloodType']) || values.bloodType == profile.get('bloodType', null))
+        && (!values.keys().hasAny(['height']) || values.height == profile.get('height', null))
+        && (!values.keys().hasAny(['weight']) || values.weight == profile.get('weight', null))
+        && (!values.keys().hasAny(['chronicDiseases']) || values.chronicDiseases == profile.get('chronicDiseases', null))
+        && (!values.keys().hasAny(['allergies']) || values.allergies == profile.get('allergies', null));
+    }
+
+    function currentProfileGrant(owner, viewer, data) {
+      let relationship = get(/databases/$(database)/documents/users/$(owner)/family_members/$(viewer)).data;
+      return validProfileProjection(data) && data.inviteId == relationship.inviteId;
+    }
+
     function familySharing(owner, kind) {
-      let shared = get(/databases/$(database)/documents/users/$(owner)/family_members/$(request.auth.uid)).data.sharedData;
+      let projection = get(/databases/$(database)/documents/users/$(owner)/shared_profile/$(request.auth.uid)).data;
       return isAuthenticated() && validFamily(owner, request.auth.uid)
-        && ((kind == '血糖' && (shared.get('血糖', false) || shared.get('血糖數據', false)))
-          || (kind == '血壓' && (shared.get('血壓', false) || shared.get('血壓數據', false)))
-          || (kind == '用藥' && (shared.get('用藥', false) || shared.get('用藥記錄', false) || shared.get('用藥數據', false))));
+        && currentProfileGrant(owner, request.auth.uid, projection)
+        && projection.records.get(kind, false) == true;
     }
 
     // Relationships may only be created while consuming a pending invitation.
@@ -82,10 +139,13 @@ service cloud.firestore {
       let after = getAfter(/databases/$(database)/documents/family_invites/$(inviteId)).data;
       return isAuthenticated()
         && request.resource.data.userId == member && owner != member
+        && request.resource.data.keys().hasOnly(['userId', 'inviteId', 'sharedData',
+          'name', 'relation', 'isOnline', 'createdAt'])
+        && request.resource.data.get('name', '家人') == '家人'
         && before.status == 'pending' && before.expiresAt > request.time
         && after.status == 'accepted' && after.acceptedBy == request.auth.uid
         && ((before.invitedBy == owner && member == request.auth.uid
-            && request.resource.data.sharedData == before.sharedData)
+            && noSharing(request.resource.data.sharedData))
           || (owner == request.auth.uid && member == before.invitedBy
             && noSharing(request.resource.data.sharedData)))
         && existsAfter(/databases/$(database)/documents/users/$(member)/family_members/$(owner));
@@ -93,9 +153,8 @@ service cloud.firestore {
 
     // 用戶資料 (users/{userId})
     match /users/{userId} {
-      // 已登入用戶可讀取基本資料（接受家庭邀請時需要查詢對方的名字/email）
-      // 健康相關子集合仍受各自規則保護
-      allow read: if isAuthenticated();
+      // Private profile is never readable by another account, including family.
+      allow read: if isOwner(userId);
 
       // 建立帳號時驗證必要欄位
       allow create: if isOwner(userId)
@@ -108,6 +167,19 @@ service cloud.firestore {
 
       // 允許用戶刪除自己的帳號
       allow delete: if isOwner(userId);
+
+      // One strict projection per viewer; no SDK-side field hiding.
+      match /shared_profile/{viewerId} {
+        allow get: if isOwner(userId) || (isAuthenticated()
+          && request.auth.uid == viewerId && validFamily(userId, viewerId)
+          && (resource == null || currentProfileGrant(userId, viewerId, resource.data)));
+        allow list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && validFamily(userId, viewerId)
+          && currentProfileGrant(userId, viewerId, request.resource.data)
+          && request.resource.data.updatedAt == request.time
+          && profileMatchesOwner(userId, request.resource.data.values);
+        allow delete: if isOwner(userId);
+      }
 
       // 用藥紀錄 (users/{userId}/medicine)
       match /medicine/{medicineId} {
@@ -151,14 +223,25 @@ service cloud.firestore {
     
     // Invitation code possession authorizes redemption; targeted emails do not.
     match /family_invites/{inviteCode} {
-      allow read: if isAuthenticated();
+      allow get: if isAuthenticated() && (resource == null
+        || resource.data.invitedBy == request.auth.uid
+        || inviteRecipient(resource.data) && resource.data.status == 'pending'
+          && resource.data.expiresAt > request.time
+        || resource.data.get('acceptedBy', '') == request.auth.uid);
+      // Queries must constrain inviter or targeted recipient; no public directory.
+      allow list: if isAuthenticated() && (resource.data.invitedBy == request.auth.uid
+        || resource.data.get('invitedToEmail', '') == request.auth.token.get('email', '').lower()
+          && resource.data.status == 'pending');
       allow create: if isAuthenticated()
         && request.resource.data.invitedBy == request.auth.uid
         && request.resource.data.status == 'pending'
         && request.resource.data.expiresAt is timestamp
         && request.resource.data.expiresAt > request.time
         && !request.resource.data.keys().hasAny(['acceptedBy'])
-        && validSharing(request.resource.data.sharedData);
+        && noSharing(request.resource.data.sharedData)
+        && request.resource.data.keys().hasOnly(['invitedBy', 'inviterName', 'invitedToEmail',
+          'inviteCode', 'relation', 'sharedData', 'status', 'createdAt', 'expiresAt'])
+        && request.resource.data.get('inviterName', '家人') == '家人';
       allow update: if isAuthenticated()
         && resource.data.status == 'pending'
         && resource.data.expiresAt > request.time
@@ -179,14 +262,16 @@ service cloud.firestore {
 
     match /users/{userId}/family_members/{memberId} {
       allow read: if isOwner(userId)
-        || (isAuthenticated() && request.auth.uid == memberId);
+        || (isAuthenticated() && request.auth.uid == memberId && resource == null);
       allow create: if invitedRelationship(userId, memberId);
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['sharedData', 'name', 'relation', 'isOnline', 'avatarUrl'])
         && validSharing(request.resource.data.sharedData);
       allow delete: if isOwner(userId)
-        || (isAuthenticated() && request.auth.uid == memberId);
+        || (isAuthenticated() && request.auth.uid == memberId
+          && (resource == null || resource.data.get('inviteId', null) == get(/databases/$(database)/documents/users/$(memberId)/family_members/$(userId)).data.get('inviteId', null))
+          && !existsAfter(/databases/$(database)/documents/users/$(memberId)/family_members/$(userId)));
     }
 
     // 聊天室 (chats/{chatId})

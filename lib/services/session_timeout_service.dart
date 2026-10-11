@@ -1,3 +1,4 @@
+import 'auth_service.dart';
 // lib/services/session_timeout_service.dart
 // 閒置自動登出服務
 
@@ -7,9 +8,21 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SessionTimeoutService {
-  static final SessionTimeoutService _instance = SessionTimeoutService._internal();
+  static final SessionTimeoutService _instance =
+      SessionTimeoutService._internal();
   factory SessionTimeoutService() => _instance;
-  SessionTimeoutService._internal();
+  SessionTimeoutService._internal()
+    : _currentUid = (() => FirebaseAuth.instance.currentUser?.uid),
+      _signOut = (() => AuthService.logout.signOut());
+
+  SessionTimeoutService.forTesting({
+    required String? Function() currentUid,
+    required Future<bool> Function() signOut,
+  }) : _currentUid = currentUid,
+       _signOut = signOut;
+
+  final String? Function() _currentUid;
+  final Future<bool> Function() _signOut;
 
   // 設定常數
   static const String _timeoutEnabledKey = 'session_timeout_enabled';
@@ -73,22 +86,24 @@ class SessionTimeoutService {
   Future<void> _startInactivityTimer() async {
     _cancelTimer();
     final generation = _timerGeneration;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = _currentUid();
     final isEnabled = await isTimeoutEnabled();
     if (!isEnabled) return;
 
     // 確保用戶已登入
-    if (FirebaseAuth.instance.currentUser == null) return;
+    if (_currentUid() == null) return;
 
     final timeoutMinutes = await getTimeoutDuration();
-    if (generation != _timerGeneration || uid != FirebaseAuth.instance.currentUser?.uid) return;
+    if (generation != _timerGeneration || uid != _currentUid()) return;
 
     _inactivityTimer = Timer.periodic(
       const Duration(seconds: 30), // 每 30 秒檢查一次
       (timer) => _checkInactivity(timeoutMinutes),
     );
 
-    debugPrint('SessionTimeout: Timer started (timeout: $timeoutMinutes minutes)');
+    debugPrint(
+      'SessionTimeout: Timer started (timeout: $timeoutMinutes minutes)',
+    );
   }
 
   /// 重置閒置計時器
@@ -101,16 +116,16 @@ class SessionTimeoutService {
   Future<void> _checkInactivity(int timeoutMinutes) async {
     if (_lastActivityTime == null) return;
     final generation = _timerGeneration;
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = _currentUid();
 
     // 確保用戶已登入
-    if (FirebaseAuth.instance.currentUser == null) {
+    if (_currentUid() == null) {
       _cancelTimer();
       return;
     }
 
     final isEnabled = await isTimeoutEnabled();
-    if (generation != _timerGeneration || uid != FirebaseAuth.instance.currentUser?.uid) return;
+    if (generation != _timerGeneration || uid != _currentUid()) return;
     if (!isEnabled) {
       _cancelTimer();
       return;
@@ -120,23 +135,27 @@ class SessionTimeoutService {
     final inactivityDuration = now.difference(_lastActivityTime!);
 
     if (inactivityDuration.inMinutes >= timeoutMinutes) {
-      debugPrint('SessionTimeout: Session expired after ${inactivityDuration.inMinutes} minutes of inactivity');
-      await _handleSessionExpired();
+      debugPrint(
+        'SessionTimeout: Session expired after ${inactivityDuration.inMinutes} minutes of inactivity',
+      );
+      await expireSession();
     }
   }
 
   /// 處理 Session 過期
-  Future<void> _handleSessionExpired() async {
+  Future<void> expireSession() async {
     _cancelTimer();
 
-    try {
-      await FirebaseAuth.instance.signOut();
-      debugPrint('SessionTimeout: User signed out due to inactivity');
-    } catch (e) {
-      debugPrint('SessionTimeout: Error signing out: $e');
+    final expired = _onSessionExpired;
+    final uid = _currentUid();
+    final success = await _signOut();
+    if (success) {
+      expired?.call();
+    } else if (uid != null && uid == _currentUid()) {
+      // Keep timeout protection alive after an auth failure; do not claim logout.
+      _lastActivityTime = DateTime.now();
+      await _startInactivityTimer();
     }
-
-    _onSessionExpired?.call();
   }
 
   /// 取消計時器
