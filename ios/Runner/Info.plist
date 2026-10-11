@@ -44,7 +44,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>需要相機權限來拍攝食物照片進行營養分析</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>使用 Face ID 快速安全登入健康管理 App</string>
+	<string>選擇啟用 App 解鎖後，使用 Face ID 驗證以存取健康管理 App</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>讀取您的健康數據（血壓、血糖、體重、睡眠、運動）以顯示完整的健康記錄</string>
 	<key>NSHealthUpdateUsageDescription</key>

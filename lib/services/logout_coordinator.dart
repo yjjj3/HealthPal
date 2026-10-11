@@ -24,6 +24,10 @@ class LogoutCoordinator {
   final Future<void> Function() signOutAuth;
   final Future<void> Function() cleanup;
   final phase = ValueNotifier(LogoutPhase.idle);
+  final ready = ValueNotifier(true);
+  // Published only after a real, current auth mutation succeeds. Restored
+  // Firebase sessions never publish a fresh verification.
+  final freshSession = ValueNotifier<({String uid, int generation})?>(null);
   int generation = 0;
   Future<void> _authTail = Future.value();
   Future<bool>? _logout;
@@ -39,6 +43,7 @@ class LogoutCoordinator {
     Future<T> Function(bool Function() current) operation, {
     int? expectedGeneration,
     bool changesAuth = true,
+    String? Function(T value)? verifiedUid,
   }) {
     final token = expectedGeneration ?? generation;
     if (!isCurrent(token)) return Future.error(SessionOperationCancelled());
@@ -53,8 +58,16 @@ class LogoutCoordinator {
       if (!current()) throw SessionOperationCancelled();
       // A successful auth mutation invalidates other prepared login attempts.
       if (changesAuth) {
+        if (verifiedUid != null &&
+            (verifiedUid(value) == null || verifiedUid(value) != currentUid())) {
+          throw SessionOperationCancelled();
+        }
         generation++;
         _cancelAccountWork();
+        final uid = currentUid();
+        if (uid != null) {
+          freshSession.value = (uid: uid, generation: generation);
+        }
       }
       return value;
     });
@@ -121,11 +134,14 @@ class LogoutCoordinator {
     if (_logout != null) return _logout!;
     final completion = Completer<bool>();
     _logout = completion.future;
+    ready.value = false;
     generation++;
+    freshSession.value = null;
     _cancelAccountWork();
     phase.value = LogoutPhase.working;
     _finish().then((success) {
       _logout = null;
+      ready.value = true;
       completion.complete(success);
     });
     return completion.future;

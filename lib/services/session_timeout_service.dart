@@ -13,16 +13,20 @@ class SessionTimeoutService {
   factory SessionTimeoutService() => _instance;
   SessionTimeoutService._internal()
     : _currentUid = (() => FirebaseAuth.instance.currentUser?.uid),
-      _signOut = (() => AuthService.logout.signOut());
+      _signOut = (() => AuthService.logout.signOut()),
+      _now = DateTime.now;
 
   SessionTimeoutService.forTesting({
     required String? Function() currentUid,
     required Future<bool> Function() signOut,
+    DateTime Function()? now,
   }) : _currentUid = currentUid,
-       _signOut = signOut;
+       _signOut = signOut,
+       _now = now ?? DateTime.now;
 
   final String? Function() _currentUid;
   final Future<bool> Function() _signOut;
+  final DateTime Function() _now;
 
   // 設定常數
   static const String _timeoutEnabledKey = 'session_timeout_enabled';
@@ -32,19 +36,21 @@ class SessionTimeoutService {
   Timer? _inactivityTimer;
   int _timerGeneration = 0;
   DateTime? _lastActivityTime;
+  bool? _loadedEnabled;
+  int? _loadedMinutes;
   VoidCallback? _onSessionExpired;
 
   /// 初始化服務
   Future<void> initialize({required VoidCallback onSessionExpired}) async {
     _onSessionExpired = onSessionExpired;
-    _lastActivityTime = DateTime.now();
+    _lastActivityTime = _now();
     await _startInactivityTimer();
     debugPrint('SessionTimeout: Service initialized');
   }
 
   /// 記錄用戶活動
   void recordActivity() {
-    _lastActivityTime = DateTime.now();
+    _lastActivityTime = _now();
     _resetInactivityTimer();
   }
 
@@ -63,6 +69,9 @@ class SessionTimeoutService {
       await _startInactivityTimer();
     } else {
       _cancelTimer();
+      _loadedEnabled = prefs.getBool(_timeoutEnabledKey) == false
+          ? false
+          : null;
     }
 
     debugPrint('SessionTimeout: Timeout ${enabled ? "enabled" : "disabled"}');
@@ -88,13 +97,16 @@ class SessionTimeoutService {
     final generation = _timerGeneration;
     final uid = _currentUid();
     final isEnabled = await isTimeoutEnabled();
-    if (!isEnabled) return;
-
-    // 確保用戶已登入
-    if (_currentUid() == null) return;
-
-    final timeoutMinutes = await getTimeoutDuration();
+    if (generation != _timerGeneration || uid != _currentUid() || uid == null) {
+      return;
+    }
+    final timeoutMinutes = isEnabled
+        ? await getTimeoutDuration()
+        : defaultTimeoutMinutes;
     if (generation != _timerGeneration || uid != _currentUid()) return;
+    _loadedEnabled = isEnabled;
+    _loadedMinutes = timeoutMinutes;
+    if (!isEnabled) return;
 
     _inactivityTimer = Timer.periodic(
       const Duration(seconds: 30), // 每 30 秒檢查一次
@@ -131,7 +143,7 @@ class SessionTimeoutService {
       return;
     }
 
-    final now = DateTime.now();
+    final now = _now();
     final inactivityDuration = now.difference(_lastActivityTime!);
 
     if (inactivityDuration.inMinutes >= timeoutMinutes) {
@@ -142,8 +154,35 @@ class SessionTimeoutService {
     }
   }
 
+  /// Uses already loaded settings and current wall time; null fails closed.
+  /// This avoids tearing down navigation for a short native system prompt.
+  bool? get deadlineSnapshot {
+    if (_currentUid() == null || _loadedEnabled == null) return null;
+    if (_loadedEnabled == false) return true;
+    if (_lastActivityTime == null || _loadedMinutes == null) return null;
+    final elapsed = _now().difference(_lastActivityTime!);
+    return !elapsed.isNegative && elapsed < Duration(minutes: _loadedMinutes!);
+  }
+
+  /// Resume/unlock checks wall time before any activity resets the deadline.
+  Future<bool> checkDeadline() async {
+    final generation = _timerGeneration;
+    final uid = _currentUid();
+    if (uid == null) return false;
+    final enabled = await isTimeoutEnabled();
+    final minutes = await getTimeoutDuration();
+    if (generation != _timerGeneration || uid != _currentUid()) return false;
+    if (enabled &&
+        _lastActivityTime != null &&
+        _now().difference(_lastActivityTime!) >= Duration(minutes: minutes)) {
+      await expireSession();
+      return false;
+    }
+    return true;
+  }
+
   /// 處理 Session 過期
-  Future<void> expireSession() async {
+  Future<bool> expireSession() async {
     _cancelTimer();
 
     final expired = _onSessionExpired;
@@ -153,14 +192,17 @@ class SessionTimeoutService {
       expired?.call();
     } else if (uid != null && uid == _currentUid()) {
       // Keep timeout protection alive after an auth failure; do not claim logout.
-      _lastActivityTime = DateTime.now();
+      _lastActivityTime = _now();
       await _startInactivityTimer();
     }
+    return success;
   }
 
   /// 取消計時器
   void _cancelTimer() {
     _timerGeneration++;
+    _loadedEnabled = null;
+    _loadedMinutes = null;
     _inactivityTimer?.cancel();
     _inactivityTimer = null;
   }
@@ -174,7 +216,7 @@ class SessionTimeoutService {
 
   /// 用戶登入時啟動
   Future<void> onUserLoggedIn() async {
-    _lastActivityTime = DateTime.now();
+    _lastActivityTime = _now();
     await _startInactivityTimer();
   }
 

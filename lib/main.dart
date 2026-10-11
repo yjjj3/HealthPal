@@ -1,3 +1,5 @@
+import 'services/app_unlock_runtime.dart';
+import 'widgets/app_unlock_gate.dart';
 import 'widgets/logout_status_boundary.dart';
 import 'widgets/account_boundary.dart';
 // lib/main.dart
@@ -48,6 +50,7 @@ void main() async {
     debugPrint('❌ 通知服務初始化失敗: $e');
   }
 
+  AppUnlockRuntime.instance.start();
   runApp(const HealthManagementApp());
 }
 
@@ -56,7 +59,9 @@ class HealthManagementApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AccountBoundary(
+    return AppUnlockLifecycle(
+      controller: AppUnlockRuntime.instance.controller,
+      child: AccountBoundary(
       userIds: FirebaseAuth.instance.authStateChanges().map((user) => user?.uid),
       initialUid: FirebaseAuth.instance.currentUser?.uid,
       child: MaterialApp(
@@ -236,7 +241,13 @@ class HealthManagementApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) => LogoutStatusBoundary(child: child!),
+      builder: (context, child) => LogoutStatusBoundary(
+        child: AppUnlockGate(
+          controller: AppUnlockRuntime.instance.controller,
+          protectedNavigation: ActivityTracker(child: child!),
+          loginBuilder: (_) => const LoginScreen(),
+        ),
+      ),
       initialRoute: '/',
       debugShowCheckedModeBanner: false,
       routes: {
@@ -248,7 +259,7 @@ class HealthManagementApp extends StatelessWidget {
         '/health-records': (context) => const HealthRecordScreen(),
         '/share-report': (context) => const ShareReportScreen(),
       },
-    ));
+    )));
   }
 }
 
@@ -302,49 +313,6 @@ class _MainScreenState extends State<MainScreen> {
     const DietScreen(),
     const ProfileWrapper(),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeSessionTimeout();
-  }
-
-  Future<void> _initializeSessionTimeout() async {
-    await _sessionTimeoutService.initialize(
-      onSessionExpired: _handleSessionExpired,
-    );
-    if (!mounted) return;
-    await _sessionTimeoutService.onUserLoggedIn();
-  }
-
-  void _handleSessionExpired() {
-    if (mounted) {
-      // 顯示 Session 過期提示
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.timer_off, color: Colors.white),
-              SizedBox(width: 12),
-              Text('由於長時間未操作，已自動登出'),
-            ],
-          ),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _sessionTimeoutService.onUserLoggedOut();
-    super.dispose();
-  }
 
   void _onItemTapped(int index) {
     _sessionTimeoutService.recordActivity(); // 記錄用戶活動

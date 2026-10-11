@@ -120,6 +120,20 @@ HealthPal 是以 iOS 為目標的 Flutter／Firebase 健康管理專案，整合
 
 本機 Flutter 162 項回歸通過；分析為 0 error、10 warning、350 info（exit 1），無新增診斷。iOS arm64 device debug no-codesign／no-pub 編譯成功（exit 0）；既有 MLKit 的 arm64 simulator 警示仍存在，未作模擬器建置。移除後實際鏡像、背景返回與多工預覽仍待使用者更新 App 驗證；本次移除遮罩的新版本尚未安裝，也未進行真機測試；舊版安裝成功僅為使用者回報。
 
+## 8. 自選 App 解鎖，移除密碼快登（本次驗證快照，已複核）
+
+2026-10-12，使用者選擇將 Email／密碼生物辨識快登改為登入 session 的 App 解鎖，不另加 App PIN。每個 UID 在本裝置預設關閉；成功生物辨識、明確確認及設定寫入讀回相符後才啟用，可關閉。舊快登 Email／密碼／開關逐項清除，舊開關不代表新同意；不再保存或使用密碼快登，不記錄憑證內容。
+
+**邊界與取捨**：根層閘門在所有受保護路由之前，鎖定時不掛載敏感 Navigator；公共登入使用獨立導覽，不能以 back、deep link 或 restoration 放行。已啟用者冷啟動恢復 session 先鎖、離開滿 60 秒需驗證；Face ID 自身的 inactive／resumed 不循環誤鎖，真正背景會使待驗證結果失效。成功 Email／Google 登入作為本世代 fresh 驗證，不立刻再要求 Face ID；舊 UID／同 UID 舊世代 async 結果無效。
+
+取消／不可用／錯誤可留鎖頁重試，或選擇完成真正 signOut 與通知清理後重新登入；失敗不只導航。設定或舊資料清除失敗有明確提示並拒絕放行。原有預設 5 分鐘、可調閒置登出仍保留，根層維持計時，resume／驗證前後以牆鐘核對期限以涵蓋 OS 背景凍結；成功解鎖算活動。短返回以已載入設定同步核對期限，仍有效才保留原導覽；未知或到期先阻擋。此機制不是 capture／mirror 遮罩，正常解鎖後可鏡像。
+
+設定寫入／讀回跨背景或 resume 時，確認值仍同步到當前世代；待確認期間先阻擋並保留離開時間，完成後依 60 秒與閒置期限判定，不把背景設定完成算成活動。F1 先以兩項失敗回歸重現，再覆蓋啟用／停用、59／60 秒、讀回與 resume 並行、儲存失敗及切帳號／同 UID 新世代遲到完成。
+
+**本機驗證**：本次已複核驗證快照（基準 `0697335`），Flutter 全套 229 項通過（原 162 項保留），其中解鎖／登出專項 83 項、解鎖新增 67 項。涵蓋預設 OFF、確認與設定寫入失敗、逐 UID／same UID 世代、legacy 清除錯誤、59／60 秒、prompt、fallback 清理、實際 Flutter restoration，以及 Firebase 回傳 UID 與 fresh 驗證相符。分析 0 error、10 warning、348 info（exit 1，無新增）；iOS arm64 device debug no-codesign／no-pub 編譯 exit 0，App／Widget minimum 16、未簽署；MLKit simulator 警示仍存在。
+
+**限制**：本次新版本未連手機、未安裝／啟動、未真機測試；舊版可啟動僅為使用者回報。Face ID 系統 lifecycle、OS 背景計時、重新登入與通知清理仍需真機驗證。本次不修改 Firebase rules、不部署、不改簽署或新增依賴；取消等待不能收回伺服器已接受的提交。以上為本機驗證；GitHub CI 結果另以對應提交的 Actions 紀錄核對。
+
 ## 驗證快照與證據索引
 
 2026-10-11，`df26ae3` 的 [GitHub Actions run 38137150945](https://github.com/yjjj3/HealthPal/actions/runs/38137150945) 已完成：

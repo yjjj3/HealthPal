@@ -5,7 +5,6 @@ import '../theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
-import '../services/biometric_service.dart';
 import '../services/login_security_service.dart';
 import 'registration_screen.dart';
 
@@ -131,13 +130,10 @@ class _LoginForm extends StatefulWidget {
 class _LoginFormState extends State<_LoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
-  final _biometricService = BiometricService();
   final _loginSecurityService = LoginSecurityService();
   String _email = '';
   String _password = '';
   bool _isLoading = false;
-  bool _canUseBiometric = false;
-  String _biometricTypeName = '生物辨識';
 
   // 登入安全相關狀態
   bool _isAccountLocked = false;
@@ -152,7 +148,6 @@ class _LoginFormState extends State<_LoginForm> {
   @override
   void initState() {
     super.initState();
-    _checkBiometricAvailability();
     _checkAppleSignInAvailability();
   }
 
@@ -191,94 +186,6 @@ class _LoginFormState extends State<_LoginForm> {
     });
   }
 
-  // 檢查生物辨識是否可用
-  Future<void> _checkBiometricAvailability() async {
-    final isEnabled = await _biometricService.isBiometricLoginEnabled();
-    final hasCredentials = await _biometricService.hasStoredCredentials();
-    final canCheck = await _biometricService.canCheckBiometrics();
-    final types = await _biometricService.getAvailableBiometrics();
-
-    if (mounted) {
-      setState(() {
-        _canUseBiometric = isEnabled && hasCredentials && canCheck;
-        _biometricTypeName = _biometricService.getBiometricTypeName(types);
-      });
-    }
-  }
-
-  // 生物辨識登入
-  Future<void> _biometricLogin() async {
-    var attempt = _authService.sessionGeneration;
-    setState(() => _isLoading = true);
-
-    try {
-      final credentials = await _biometricService
-          .authenticateAndGetCredentials();
-
-      if (credentials == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('生物辨識驗證失敗'),
-              backgroundColor: Colors.orange,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
-        }
-        return;
-      }
-
-      final (email, password) = credentials;
-
-      // 使用儲存的憑證登入
-      final userCredential = await _authService.signInWithEmail(
-        email: email,
-        password: password,
-        expectedGeneration: attempt,
-      );
-
-      attempt = _authService.sessionGeneration;
-      if (userCredential?.user != null &&
-          _authService.currentUser?.uid == userCredential?.user?.uid &&
-          _authService.isCurrentAttempt(attempt) &&
-          mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$_biometricTypeName 登入成功'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } on SessionOperationCancelled {
-      return;
-    } catch (e) {
-      if (!_authService.isCurrentAttempt(attempt)) return;
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('登入失敗：$e'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // Email 驗證
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return '電子郵件為必填欄位';
@@ -344,17 +251,8 @@ class _LoginFormState extends State<_LoginForm> {
       if (userCredential?.user != null &&
           _authService.currentUser?.uid == userCredential?.user?.uid &&
           _authService.isCurrentAttempt(attempt)) {
-        // Drain existing credential writes before logout/new-account login.
-        // Retain the same biometric opt-in and credential storage policy.
         await AuthService.logout.finishSignIn(attempt, (current) async {
-          await _loginSecurityService.recordSuccessfulLogin(email);
-          if (!current()) return;
-          final biometricEnabled = await _biometricService
-              .isBiometricLoginEnabled();
-          if (!current()) return;
-          if (biometricEnabled) {
-            await _biometricService.saveUserCredentials(email, _password);
-          }
+          if (current()) await _loginSecurityService.recordSuccessfulLogin(email);
         });
 
         if (!mounted || !_authService.isCurrentAttempt(attempt)) return;
@@ -846,53 +744,6 @@ class _LoginFormState extends State<_LoginForm> {
                     ),
             ),
           ),
-
-          // 生物辨識登入按鈕
-          if (_canUseBiometric) ...[
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(child: Divider(color: Colors.grey.shade300)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    '或使用',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                  ),
-                ),
-                Expanded(child: Divider(color: Colors.grey.shade300)),
-              ],
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: OutlinedButton.icon(
-                onPressed: _isLoading ? null : _biometricLogin,
-                icon: Icon(
-                  _biometricTypeName == 'Face ID'
-                      ? Icons.face
-                      : Icons.fingerprint,
-                  size: 24,
-                  color: _primaryColor,
-                ),
-                label: Text(
-                  '使用 $_biometricTypeName 登入',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: _primaryColor,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: _primaryColor, width: 2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-            ),
-          ],
 
           // ==================== 社交登入區塊 ====================
           const SizedBox(height: 24),

@@ -1,7 +1,8 @@
 import '../theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'change_password_screen.dart';
-import '../services/biometric_service.dart';
+import '../services/app_unlock_runtime.dart';
+import '../widgets/app_unlock_settings.dart';
 import '../services/session_timeout_service.dart';
 
 
@@ -17,11 +18,7 @@ class PrivacySecurityScreen extends StatefulWidget {
 }
 
 class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
-  final _biometricService = BiometricService();
   final _sessionTimeoutService = SessionTimeoutService();
-  bool _biometricEnabled = false;
-  bool _biometricAvailable = false;
-  String _biometricTypeName = '生物辨識';
 
   // 閒置自動登出設定
   bool _sessionTimeoutEnabled = true;
@@ -30,7 +27,6 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
   @override
   void initState() {
     super.initState();
-    _loadBiometricSettings();
     _loadSessionTimeoutSettings();
   }
 
@@ -83,84 +79,6 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
       await _sessionTimeoutService.setTimeoutDuration(result);
       setState(() => _sessionTimeoutMinutes = result);
       _showSnackbar('閒置登出時間已設為 $result 分鐘');
-    }
-  }
-
-  Future<void> _loadBiometricSettings() async {
-    final canCheck = await _biometricService.canCheckBiometrics();
-    final isSupported = await _biometricService.isDeviceSupported();
-    final types = await _biometricService.getAvailableBiometrics();
-    final isEnabled = await _biometricService.isBiometricLoginEnabled();
-
-    if (mounted) {
-      setState(() {
-        _biometricAvailable = canCheck && isSupported;
-        _biometricTypeName = _biometricService.getBiometricTypeName(types);
-        _biometricEnabled = isEnabled;
-      });
-    }
-  }
-
-  Future<void> _toggleBiometric(bool value) async {
-    if (value) {
-      // 啟用生物辨識 - 需要先驗證
-      final authenticated = await _biometricService.authenticate(
-        reason: '驗證身份以啟用 $_biometricTypeName 登入',
-      );
-
-      if (!authenticated) {
-        _showSnackbar('驗證失敗，無法啟用 $_biometricTypeName');
-        return;
-      }
-
-      // 提示用戶需要重新登入以儲存憑證
-      if (mounted) {
-        final shouldProceed = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(
-                  _biometricTypeName == 'Face ID' ? Icons.face : Icons.fingerprint,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 12),
-                Text('啟用 $_biometricTypeName'),
-              ],
-            ),
-            content: Text(
-              '啟用後，下次登入時可使用 $_biometricTypeName 快速登入。\n\n'
-              '請注意：您需要在下次使用密碼登入時，系統會自動記住您的登入資訊。',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('確認啟用'),
-              ),
-            ],
-          ),
-        );
-
-        if (shouldProceed == true) {
-          await _biometricService.setBiometricLoginEnabled(true);
-          setState(() => _biometricEnabled = true);
-          _showSnackbar('$_biometricTypeName 登入已啟用');
-        }
-      }
-    } else {
-      // 停用生物辨識
-      await _biometricService.setBiometricLoginEnabled(false);
-      await _biometricService.clearUserCredentials();
-      setState(() => _biometricEnabled = false);
-      _showSnackbar('$_biometricTypeName 登入已停用');
     }
   }
 
@@ -276,44 +194,7 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
             // --- 區塊 1: 登入安全 ---
             _buildSectionTitle('登入安全'),
 
-            // 生物辨識登入開關
-            if (_biometricAvailable)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: SwitchListTile(
-                  secondary: Icon(
-                    _biometricTypeName == 'Face ID' ? Icons.face : Icons.fingerprint,
-                    color: AppColors.primary,
-                  ),
-                  title: Text(
-                    '$_biometricTypeName 登入',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                  subtitle: Text(
-                    _biometricEnabled ? '已啟用快速登入' : '使用 $_biometricTypeName 快速登入',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  value: _biometricEnabled,
-                  onChanged: _toggleBiometric,
-                  activeColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                ),
-              ),
+            AppUnlockSettings(controller: AppUnlockRuntime.instance.controller),
 
             // 閒置自動登出開關
             Container(

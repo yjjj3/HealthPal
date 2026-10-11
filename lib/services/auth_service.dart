@@ -34,12 +34,13 @@ class AuthService {
     int? expectedGeneration,
   }) async {
     try {
-      UserCredential userCredential = await logout.signIn(
+      UserCredential userCredential = await logout.signIn<UserCredential>(
         (_) => _auth.createUserWithEmailAndPassword(
           email: email,
           password: password,
         ),
         expectedGeneration: expectedGeneration,
+        verifiedUid: (credential) => credential.user?.uid,
       );
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -54,10 +55,11 @@ class AuthService {
     int? expectedGeneration,
   }) async {
     try {
-      UserCredential userCredential = await logout.signIn(
+      UserCredential userCredential = await logout.signIn<UserCredential>(
         (_) =>
             _auth.signInWithEmailAndPassword(email: email, password: password),
         expectedGeneration: expectedGeneration,
+        verifiedUid: (credential) => credential.user?.uid,
       );
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -114,9 +116,10 @@ class AuthService {
       );
 
       // 使用憑證登入 Firebase
-      return await logout.signIn(
+      return await logout.signIn<UserCredential>(
         (_) => _auth.signInWithCredential(credential),
         expectedGeneration: token,
+        verifiedUid: (credential) => credential.user?.uid,
       );
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -182,9 +185,10 @@ class AuthService {
       ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
 
       // 使用憑證登入 Firebase
-      final userCredential = await logout.signIn(
+      final userCredential = await logout.signIn<UserCredential>(
         (_) => _auth.signInWithCredential(oauthCredential),
         expectedGeneration: token,
+        verifiedUid: (credential) => credential.user?.uid,
       );
 
       // 如果是首次登入，更新用戶顯示名稱

@@ -73,7 +73,19 @@ firebase deploy --only functions:healthpal-ai --project YOUR_FIREBASE_PROJECT
 
 ## 登出與認證邊界
 
-手動與 timeout 共用登出協調器，重複操作合併；Firebase 登出失敗保留登入狀態並顯示重試，通知清理失敗與認證成功分開呈現。只有認證變更及必要憑證儲存加入 auth 序列；Firestore 資料工作獨立守衛，離線 pending 不阻擋真正 signOut。登出及成功登入使舊資料工作失效，遲到結果不報成功；導航由 auth 狀態決定。原生通知工作排空後再清除，FCM token 更新不阻塞帳號 ready。生物辨識設定與儲存憑證策略不變；原生通知及 provider 行為仍需真機驗證。
+手動與 timeout 共用登出協調器，重複操作合併；Firebase 登出失敗保留登入狀態並顯示重試，通知清理失敗與認證成功分開呈現。只有認證變更及必要憑證儲存加入 auth 序列；Firestore 資料工作獨立守衛，離線 pending 不阻擋真正 signOut。登出及成功登入使舊資料工作失效，遲到結果不報成功；導航由 auth 狀態決定。原生通知工作排空後再清除，FCM token 更新不阻塞帳號 ready。2026-10-12 的 App 解鎖改動移除密碼快登；原生通知及 provider 行為仍需真機驗證。
+
+## App 解鎖（2026-10-12，本次驗證快照，已複核）
+
+根層閘門位於所有受保護 Navigator／路由之前，未解鎖不掛載敏感頁面；公共登入 Navigator 不採用受保護的 deep link／restoration 路由。UID 與認證世代綁定 async 結果，Email／Google 成功登入發布本世代 fresh 驗證，冷啟動恢復的 Firebase session 不算 fresh。這不是螢幕擷取遮罩，解鎖後可鏡像。
+
+逐 UID 的裝置設定預設 OFF；Face ID／生物辨識成功、使用者確認、Keychain 寫入並讀回相符後才報啟用。啟用者冷啟動先鎖、離開滿 60 秒再鎖；短暫系統 prompt 不觸發 60 秒鎖，Face ID 自身 inactive／resumed 不循環鎖，真正 paused 使待驗證結果失效。local_auth 僅 biometricOnly、不新增 App PIN；不可用／取消／錯誤留鎖頁。
+
+舊 `user_email`／`user_credential`／`biometric_enabled` 逐項刪除並核對結果，不繼承舊同意、不記錄內容；新讀寫或遷移失敗拒絕放行且可重試。重新登入必須真正 signOut 並完成通知清理。閒置計時改由根層持有，避免卸載鎖頁下方主頁就停止計時；預設 5 分鐘與既有可調設定保留，resume／驗證前後核對牆鐘期限，成功解鎖才記為活動。短返回僅在已載入設定的同步期限仍有效時保留原導覽；未知或到期先阻擋。
+
+設定寫入／讀回跨背景或 resume 時，確認值仍同步到當前世代；待確認期間先阻擋並保留離開時間，完成後依 60 秒與閒置期限判定，不把背景設定完成算成活動。F1 先以兩項失敗回歸重現，再覆蓋啟用／停用、59／60 秒、讀回與 resume 並行、儲存失敗及切帳號／同 UID 新世代遲到完成。
+
+本次已複核驗證快照（基準 `0697335`）：Flutter 229 項（含原 162 項）／解鎖與登出專項 83 項通過；分析 0 error、10 warning、348 info（exit 1，無新增）；arm64 device debug no-codesign／no-pub exit 0，App／Widget minimum 16、未簽署。fake 含設定 UI、59／60 秒、生命週期、遲到結果與實際 Flutter restoration；未連手機、安裝或執行，既有 MLKit simulator 警示保留。
 
 ## 家庭 profile 授權
 
