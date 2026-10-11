@@ -112,6 +112,14 @@ HealthPal 是以 iOS 為目標的 Flutter／Firebase 健康管理專案，整合
 
 **剩餘限制**：取消等待不能收回伺服器已接受的 commit，也不會清除舊版 SDK 已排入的寫入；未知結果需重連核對。正式規則尚未部署，舊版需依 [相容與部署順序](FAMILY_PROFILE_SHARING.md) 更新。原生離線回呼、跨裝置重連及通知清理仍需真機驗證；未安裝／啟動真機 App。帳號刪除與一般個資日誌整改不在此次修正範圍。
 
+## 7. 展示選擇：移除 iOS 畫面遮罩
+
+2026-10-12，使用者回報以虛構測試資料安裝到 iPhone 後可開啟 App，但鏡像被「健康資料受到保護」遮罩擋住；這是使用者回報，不是自動真機測試。使用者選擇直接移除展示遮罩，不採 debug 限定開關。
+
+此次移除 iOS 螢幕擷取、截圖與背景事件監聽、遮罩及其 Dart 服務／初始化／設定開關；原開關「防止螢幕截圖和錄影」的說明一併移除。iOS 不再以此機制遮蔽錄影、鏡像或多工預覽；Firebase 資料權限、登出、生物辨識、HealthKit 與通知程式保留。舊本機偏好值不再讀寫，不刪除 App 資料。Android 原生保護不在此次 iOS 修改範圍。
+
+本機 Flutter 162 項回歸通過；分析為 0 error、10 warning、350 info（exit 1），無新增診斷。iOS arm64 device debug no-codesign／no-pub 編譯成功（exit 0）；既有 MLKit 的 arm64 simulator 警示仍存在，未作模擬器建置。移除後實際鏡像、背景返回與多工預覽仍待使用者更新 App 驗證；本次移除遮罩的新版本尚未安裝，也未進行真機測試；舊版安裝成功僅為使用者回報。
+
 ## 驗證快照與證據索引
 
 2026-10-11，`df26ae3` 的 [GitHub Actions run 38137150945](https://github.com/yjjj3/HealthPal/actions/runs/38137150945) 已完成：

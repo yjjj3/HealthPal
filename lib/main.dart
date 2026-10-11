@@ -11,7 +11,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
 import 'services/session_timeout_service.dart';
-import 'services/screenshot_protection_service.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_dimensions.dart';
 import 'theme/app_text_styles.dart';
@@ -47,14 +46,6 @@ void main() async {
     debugPrint('✅ 通知服務初始化成功');
   } catch (e) {
     debugPrint('❌ 通知服務初始化失敗: $e');
-  }
-
-  try {
-    // 初始化截圖保護服務
-    await ScreenshotProtectionService().initialize();
-    debugPrint('✅ 截圖保護服務初始化成功');
-  } catch (e) {
-    debugPrint('❌ 截圖保護服務初始化失敗: $e');
   }
 
   runApp(const HealthManagementApp());

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'change_password_screen.dart';
 import '../services/biometric_service.dart';
 import '../services/session_timeout_service.dart';
-import '../services/screenshot_protection_service.dart';
 
 
 // =================================================================
@@ -20,7 +19,6 @@ class PrivacySecurityScreen extends StatefulWidget {
 class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
   final _biometricService = BiometricService();
   final _sessionTimeoutService = SessionTimeoutService();
-  final _screenshotProtectionService = ScreenshotProtectionService();
   bool _biometricEnabled = false;
   bool _biometricAvailable = false;
   String _biometricTypeName = '生物辨識';
@@ -29,15 +27,11 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
   bool _sessionTimeoutEnabled = true;
   int _sessionTimeoutMinutes = 5;
 
-  // 截圖保護設定
-  bool _screenshotProtectionEnabled = true;
-
   @override
   void initState() {
     super.initState();
     _loadBiometricSettings();
     _loadSessionTimeoutSettings();
-    _loadScreenshotProtectionSettings();
   }
 
   Future<void> _loadSessionTimeoutSettings() async {
@@ -90,21 +84,6 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
       setState(() => _sessionTimeoutMinutes = result);
       _showSnackbar('閒置登出時間已設為 $result 分鐘');
     }
-  }
-
-  Future<void> _loadScreenshotProtectionSettings() async {
-    final isEnabled = await _screenshotProtectionService.isProtectionEnabled();
-    if (mounted) {
-      setState(() {
-        _screenshotProtectionEnabled = isEnabled;
-      });
-    }
-  }
-
-  Future<void> _toggleScreenshotProtection(bool value) async {
-    await _screenshotProtectionService.setProtectionEnabled(value);
-    setState(() => _screenshotProtectionEnabled = value);
-    _showSnackbar(value ? '截圖保護已啟用' : '截圖保護已停用');
   }
 
   Future<void> _loadBiometricSettings() async {
@@ -395,43 +374,6 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
                       ),
                     ),
                 ],
-              ),
-            ),
-
-            // 截圖保護開關
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: SwitchListTile(
-                secondary: const Icon(Icons.screenshot, color: AppColors.primary),
-                title: const Text(
-                  '截圖保護',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: Text(
-                  _screenshotProtectionEnabled
-                      ? '已啟用，防止螢幕截圖和錄影'
-                      : '已停用，允許截圖',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                value: _screenshotProtectionEnabled,
-                onChanged: _toggleScreenshotProtection,
-                activeColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               ),
             ),
 
