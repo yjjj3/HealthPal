@@ -29,7 +29,7 @@ Firestore 主要路徑為 `users/{uid}/medicine`、`medication_logs`、`health_r
 
 mobile_scanner 6.0.2 鎖定 GoogleMLKit/BarcodeScanning 7，podspec 排除模擬器 i386／armv7／arm64。MLImage／MLKitCommon／MLKitVision 二進位 arm64 為 device（平台 2）、x86_64 為 simulator（平台 7）；BarcodeScanning 也是靜態 fat library，不能把 arm64 等同 simulator slice。沒有清除架構排除或升級套件。iOS 26+ arm64 模擬器仍受限；x86_64 編譯成功不代表可以在該模擬器啟動。
 
-本輪完整命令與原生證據（只建置，不安裝／啟動／簽署）：
+本輪命令與原生證據（只建置，不安裝／啟動／簽署）：公開命令以 `<SIMULATOR_ID>` 代替本機 UUID；用 `xcrun simctl list devices available` 查得既有 iOS 18.2／x86_64 裝置 ID 再替換，實測 UUID 僅留本機 log。
 
 ```sh
 flutter --no-version-check pub get --enforce-lockfile
@@ -41,7 +41,7 @@ flutter --no-version-check build ios --simulator --debug --no-codesign --no-pub
 # 修正後 exit 0，32.8s；兩者 minimum 16，Runner x86_64
 python3 tool/check_ios_compatibility.py
 # exit 0；arm64 device／simulator Widget typecheck，warnings-as-errors
-xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,id=26F6B138-E252-4174-A634-5A81FED2C7A4,arch=x86_64' "BUILD_DIR=$PWD/build/ios" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,id=<SIMULATOR_ID>,arch=x86_64' "BUILD_DIR=$PWD/build/ios" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
 # exit 0；既有 iOS 18.2，BUILD SUCCEEDED，0 error；沒有安裝／啟動
 ```
 
@@ -56,6 +56,18 @@ xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Debug
 用藥／處方一致性修正保留於 `4f19d64`、`efc572a`、`57a32ef`、`07d4dc5`、`acfe247`。`6e190c3` 的 Ubuntu CI 成功、artifact 數量 0；CI 保留分析、Flutter／backend／rules 測試，不做 iOS 原生建置或簽署。
 
 整 App arm64 device 建置、iOS 16 實際執行、Xcode XCTest 與簽署皆未測；沒有新增 runtime／全域工具。已確認 plist 語法、權限說明及 App Group 交集，但這不代表平台授權、登入或正式服務可用。
+
+## Gateway 設定
+
+使用自己的 Firebase 專案與已安裝 Firebase CLI／Node 22，依 functions/package-lock.json 安裝後端依賴。下列只供自行部署參考，可能產生雲端費用，本輪未執行：
+
+```sh
+npm --prefix functions ci
+firebase functions:secrets:set OPENAI_API_KEY --project YOUR_FIREBASE_PROJECT
+firebase deploy --only functions:healthpal-ai --project YOUR_FIREBASE_PROJECT
+```
+
+供應商金鑰僅存 Secret Manager。將自己的函式 URL 寫入未追蹤環境檔的 AI_GATEWAY_URL，必須覆寫 App 的既有預設；不要將金鑰填進 client 或文件。規則／索引及登入設定需另行審閱，後端部署不代表整個專案已安全配置。
 
 ## 真機驗證清單
 

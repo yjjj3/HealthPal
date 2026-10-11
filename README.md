@@ -17,18 +17,28 @@ Flutter／Dart、Firebase Auth／Firestore／Storage、受驗證的 AI gateway�
 
 ## iOS 開發
 
-使用相容 Flutter、Xcode 與 CocoaPods；版本依 `pubspec.lock`、`ios/Podfile.lock`，不要先升級套件。
+先準備相容 Flutter、Xcode、CocoaPods，以及 Firebase CLI／FlutterFire CLI（若尚未產生 Firebase 設定）。版本依 `pubspec.lock`、`ios/Podfile.lock`，不要先升級套件。
+
+在自己的 Firebase 專案啟用所需服務，以 `flutterfire configure --project YOUR_FIREBASE_PROJECT --platforms=ios` 產生 client 設定；另核對登入、HealthKit、App Groups 與 iOS 平台設定。這些 CLI 操作可能存取雲端，請在自己的授權環境操作。常用 Firebase 設定與本機環境檔已有 ignore 規則，但新增檔案仍須檢查追蹤狀態與內容。
+
+```sh
+cp .env.development.example.json .env.development.json
+```
+
+在此未追蹤檔案填入自己的 `AI_GATEWAY_URL`，`OPENAI_API_KEY` 保持空白；端點須與自己的 Firebase 專案一致。後端前提見 [gateway 設定](docs/TECHNICAL_DETAILS.md#gateway-設定)。請勿把 API 金鑰、服務帳號、簽署憑證或真實健康樣本放入原始碼、assets 或公開文件。Firebase client 識別設定不是伺服器秘密，但仍需限制金鑰並驗證規則。
 
 ```sh
 flutter pub get --enforce-lockfile
 cd ios && pod install --deployment && cd ..
-flutter build ios --simulator --debug --no-codesign --no-pub
+flutter build ios --simulator --debug --no-codesign --no-pub --dart-define-from-file=.env.development.json
 python3 tool/check_ios_compatibility.py
 ```
 
-建置不會安裝或啟動 App。目前原生建置限制見技術文件；Ubuntu CI 綠燈不代表 iOS 建置或真機測試通過。
+建置不會安裝或啟動 App。目前原生建置限制見技術文件；Ubuntu CI 綠燈不代表 iOS 建置或真機測試通過。以下僅是準備好測試環境後的開發啟動範例，本輪未執行：
 
-自行準備 Firebase 平台設定與登入／HealthKit／App Groups 能力。常用 Firebase 設定與本機環境檔已有 ignore 規則，但新增檔案仍須檢查追蹤狀態與內容。AI 使用自己的受驗證 gateway，透過未追蹤的 `.env.development.json` 設定 `AI_GATEWAY_URL`。請勿把 API 金鑰、服務帳號、簽署憑證或真實健康樣本放入原始碼、assets 或公開文件。Firebase client 識別設定不是伺服器秘密，但仍需限制金鑰並驗證規則。
+```sh
+flutter run --dart-define-from-file=.env.development.json
+```
 
 ## 驗證
 
