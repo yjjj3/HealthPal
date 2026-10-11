@@ -1,178 +1,72 @@
 # HealthPal 技術細節
 
-依目前原始碼整理，不代表所有功能已通過整合測試。
+## 架構
 
-## 架構與啟動
+Flutter 畫面、服務、模型及共用元件分層；部分畫面仍直接操作 Firestore。Firebase 提供帳號、資料與檔案儲存，AIClient 共用 HTTP transport、JSON schema 驗證與 gateway。正式 AI 請求需 Firebase ID token，伺服器保存供應商金鑰；請求限額不等同費用上限。
 
-畫面、服務、模型、共用元件與主題分層。狀態主要使用 StatefulWidget、setState 與 StreamBuilder；部分畫面直接操作 Firestore，尚未全面抽象為 repository。
+## 核心一致性
 
-main.dart 初始化 Flutter 綁定、Firebase、通知與截圖保護，再啟動應用。個別初始化失敗會記錄後繼續，啟動成功不代表所有後端服務就緒。AuthScreen 監聽 Firebase Auth 切換登入頁及主畫面；主導覽含儀表板、紀錄、用藥、分析、飲食及個人頁，並追蹤操作支援逾時登出。
+- **服藥交易**：同一交易更新狀態、庫存、receipt 與日誌；取消回補原扣除量，重複操作不重複扣補。編輯合併實際修改欄位並檢查衝突。
+- **療程與提醒**：共用開始／結束日及頻率規則，排程未來最多 30 日，以 60 則總通知為保守預算。容量不足公開省略與涵蓋期限；App 關閉後不能無限補排，需期限前再開啟。
+- **紀錄完成率**：分母為已到期應服時段，依操作序號取最終狀態。歷史、日誌或快照不完整時不宣稱精確百分比；每日重置時間與最後服藥操作時間分開保存。
+- **處方**：圖片格式／大小及 AI 回應驗證後人工確認；藥品與來源共用草稿身分。固定文件 ID 與批次標記避免回應遺失後重試重複新增，亦避免刪除後重試復活文件。資料已儲存但通知失敗會分別回報。
+- **帳號邊界**：UID 改變重建導覽、釋放監聽與快取；非同步結果驗證世代及原帳號。通知原生工作串列執行，帳號切換等待舊工作結束再清除。
 
-## 處方箋辨識流程
+Firestore 主要路徑為 `users/{uid}/medicine`、`medication_logs`、`health_records`、`diet_records`、`settings` 與家庭／聊天資料。規則及複合索引各自版本控制；模擬器不能證明正式索引已 READY。未使用的 prescriptions 儲存路徑、Storage 規則與公開基本資料欄位仍需個別評估，不應假設所有資料已受完整保護。
 
-核心為 `lib/services/prescription_scan_service.dart` 與 `lib/models/prescription_model.dart`。
+## iOS 原生核對（2026-10-11）
 
-1. 依圖片內容識別 JPEG、PNG、GIF、WebP，拒絕不支援的格式、空檔與超過 10 MiB 的輸入，再編碼為 Base64；這是格式簽章檢查，不代表完整圖片解碼驗證。
-2. 由共用 AIClient 發送請求：gpt-4o、圖片 detail high、temperature 0.1、max_tokens 4096。正式版走 Firebase AI gateway，debug 可使用本機開發金鑰。
-3. 使用 strict JSON schema，並以 PrescriptionRecognition 再驗證欄位型別、非負數量、日期與 0–1 confidence。拒絕、截斷、空白或不合法回應會回報錯誤，不保存原始回應或產生假資料。
-4. 不明劑量、頻率、時機、單位與給藥途徑保留空值，確認畫面要求人工補齊；不自動猜成每天一顆。副作用與注意事項保留模型回傳原文，仍需與原圖核對。
-5. 多張圖片依序處理；任何一張失敗都中止該批，不將部分結果當作完整辨識。
-6. PrescriptionMedicationMapper 負責轉換；MedicationDose 統一處理小數、分數、半顆與頻率。0.5 顆從建立、編輯、庫存到服藥日誌皆保留小數；不支援的複雜用法要求確認。PRN 不建立固定提醒；不明頻率不猜測。編輯時保留相同時段的服藥狀態。
-7. 用藥以 Firestore batch 寫入 medicine。另有未被畫面使用的 savePrescription 方法，prescriptions 尚未配置規則。
+本機 Xcode 26.6，iOS SDK 26.5，已有 iOS 17–26 模擬器。Flutter 與 CocoaPods 依原鎖檔補齊，`pod install --deployment` 成功，未升級版本。
 
-JSON schema 只能約束格式，不能證明辨識正確；confidence 未經校準，尚未建立 OCR 正確率或藥品資料庫交叉校驗。結構化輸出依 [OpenAI 官方文件](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=chat) 設定，拒絕與截斷仍由客戶端另外處理。
+| 範圍 | 原設定 | 本輪有效設定／需求 |
+| --- | --- | --- |
+| Runner（Debug／Profile／Release） | 15 | 16，符合既有 Podfile；mobile_scanner／MLKit 至少 15.5，Firebase 至少 15 |
+| HealthWidgetExtension（三組配置） | 26.2 | 16，以 availability／背景 fallback 通過 SDK 編譯 |
+| RunnerTests | 繼承 project 13 | 未修改；本輪沒有執行 Xcode 原生 XCTest |
+| Pods | post_install 16 | 保持 16，55 個 pods 安裝成功 |
 
-QR 解析支援 keyword、drugCode、code、id 參數及英數字路徑末段，只接受 HTTP(S) 且不含帳密的網址，未限制醫院網域；不會直接存取該網址。fetchDrugInfo 目前回傳 null，尚未串接正式醫院 API。
+健康 Widget 是 Bundle 唯一註冊項目。同步資料夾中的範例也會編譯：`WidgetConfigurationIntent`（17）、`ControlWidget`／相關 intent（18）、ActivityKit／Dynamic Island（16.1）、Widget／Activity preview（17）均加 availability。`containerBackground`（17）在 iOS 16 改用系統背景；沒有啟用新範例功能。已安裝 SDK 嚴格 typecheck 驗證 device 與 simulator 的 iOS 16 target 均無診斷；來源沒有需要 iOS 26 的 API，不必因範例提高整 App 最低版本。
 
-## 用藥、通知與健康同步
+mobile_scanner 6.0.2 鎖定 GoogleMLKit/BarcodeScanning 7，podspec 排除模擬器 i386／armv7／arm64。MLImage／MLKitCommon／MLKitVision 二進位 arm64 為 device（平台 2）、x86_64 為 simulator（平台 7）；BarcodeScanning 也是靜態 fat library，不能把 arm64 等同 simulator slice。沒有清除架構排除或升級套件。iOS 26+ arm64 模擬器仍受限；x86_64 編譯成功不代表可以在該模擬器啟動。
 
-FirestoreService.toggleMedicationIntake 使用 transaction 讀取藥品並檢查時段狀態，再同步更新服藥狀態、庫存及新增日誌；取消服用也留下紀錄。
-
-NotificationService 包含 FCM 初始化、token 儲存、本機通知、用藥及漏服提醒，以 timezone 處理排程。實際送達取決於裝置權限、背景限制與 Firebase 設定，需真機驗證；儲存庫未包含完整的伺服器端推播部署。
-
-HealthPlatformService 讀取血壓、心率、血糖、體重、睡眠、步數及運動並同步到 health_records。iOS 使用 Apple 健康、Android 使用 Health Connect，各平台權限與資料可用性需驗證。
-
-## 同步可靠性與效能
-
-儀表板與健康檔案直接解析 snapshot，不再用監聽事件觸發另一輪 get。各資料來源分別追蹤載入與錯誤狀態；重試會先取消舊訂閱，再建立新訂閱，並以世代編號及 UID 避免過期結果更新畫面。個人資料使用固定文件 stream，ProfileScreen 在父元件資料更新時同步更新模型。
-
-| 畫面／資料 | 查詢範圍 |
-| --- | --- |
-| 儀表板健康統計 | 最近 7 天 |
-| 健康檔案最近紀錄 | 最新 20 筆 |
-| 個人最新體重／家人單項健康卡 | 指定分類，最新 1 筆 |
-| 健康分析圖表 | 最近 90 天，涵蓋 7／30／90 天切換 |
-| 飲食首頁 | 當日，跨日後重新綁定 |
-| 健康、飲食、用藥歷史／聊天與訊息 | 首批 50 筆，按需載入更多 |
-| 儀表板家庭邀請 | pending 且符合目前使用者 email／電話 |
-
-LiveQueryWindow 只維持一組 Firestore 訂閱，多個訂閱者共用快照，較晚加入者也會取得最新資料。載入更多會擴大 limit，保留已載入範圍的即時新增、修改與刪除，避免游標頁面在併發寫入時產生邊界缺漏。代價是每次擴大範圍會重新訂閱整個已載入視窗；目前並未對所有已載入紀錄設總上限。分類篩選在 Firestore 查詢端執行，聊天搜尋只搜尋已載入項目。新增舊訊息不會強制捲回聊天室底部。
-
-AccountBoundary 包在 MaterialApp 外層：UID 改變或登出時，重新建立導覽及所有頁面並釋放舊訂閱。非同步資料載入、圖片讀取、登入及個人資料編輯補上 mounted／UID 防護；閒置計時器以世代檢查避免舊檢查誤登出新帳號。
-
-NotificationService 合併同時初始化呼叫，成功後不再重複初始化；初始化失敗可重試。FCM 前景及 token 更新各保留一組應用生命週期訂閱。通知設定即時監聽，帳號綁定依序執行；切換帳號取消舊排程，同帳號重新開啟應用保留排程。排程等候設定載入並驗證帳號，避免沿用舊帳號設定；token 非同步結果僅寫回原帳號。
-
-權限不足、登入失效、網路中斷、索引未就緒與空資料使用不同狀態。飲食讀取失敗不再放入示範紀錄，AI 回應解析失敗也不再產生測試營養數據；未成功取得或確認的分析不會因此寫入飲食紀錄。資料快照不再控制分析對話框的關閉。
-
-複合索引包含 health_records 的 category／record_time、family_invites 的 status／目標 email 或電話，以及 chats 的 members／lastTime。部署前可檢查現有索引，避免覆蓋其他設定；部署命令：
+本輪完整命令與原生證據（只建置，不安裝／啟動／簽署）：
 
 ```sh
-firebase deploy --only firestore:indexes --project health-management-f046a
+flutter --no-version-check pub get --enforce-lockfile
+# exit 0；pubspec.lock 未變
+(cd ios && COCOAPODS_DISABLE_STATS=true pod install --deployment)
+# exit 0；Podfile.lock 未變，55 pods
+flutter --no-version-check build ios --simulator --debug --no-codesign --no-pub
+# 修正前 exit 0，449.4s，Runner x86_64；App minimum 15、Widget 26.2
+# 修正後 exit 0，32.8s；兩者 minimum 16，Runner x86_64
+python3 tool/check_ios_compatibility.py
+# exit 0；arm64 device／simulator Widget typecheck，warnings-as-errors
+xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,id=26F6B138-E252-4174-A634-5A81FED2C7A4,arch=x86_64' "BUILD_DIR=$PWD/build/ios" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+# exit 0；既有 iOS 18.2，BUILD SUCCEEDED，0 error；沒有安裝／啟動
 ```
 
-索引部署完成後仍需等待狀態 READY；Firestore 模擬器測試不能代替線上索引可用性檢查。
+原始 Widget 使用 `xcrun swiftc -typecheck ios/HealthWidget/*.swift -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" -target arm64-apple-ios16.0-simulator` 重現 exit 1，首要 error 為 ConfigurationAppIntent 的 perform availability；補齊型別及 preview availability 後，嚴格編譯通過。完整 App build 的 MLKit 架構與 UIScene 提示是警告，並非最終失敗。
 
-## 資料路徑
+本機完整輸出留在 `/tmp/healthpal-ios-pub.log`、`healthpal-ios-pods.log`、`healthpal-ios-build.log`、`healthpal-ios-build-final.log`、`healthpal-ios-compatibility.log`、`healthpal-ios-simulator18.log`，不提交建置日誌或本機設定。原生 build 仍有既有套件／UIScene 相容性警告；純 Widget 回歸沒有新增警告。
 
-| Firestore 路徑 | 用途 |
-| --- | --- |
-| users/{uid} | 基本資料與 FCM token 等 |
-| users/{uid}/medicine | 藥品與服藥狀態 |
-| users/{uid}/medication_logs | 服用與取消日誌 |
-| users/{uid}/prescriptions | 處方箋 |
-| users/{uid}/health_records | 健康紀錄 |
-| users/{uid}/diet_records | 飲食紀錄 |
-| users/{uid}/settings | 設定 |
-| users/{uid}/family_members | 家庭成員 |
-| family_invites/{inviteCode} | 邀請 |
-| chats/{chatId}/messages | 訊息 |
+## 驗證紀錄與限制
 
-SharedPreferences 儲存用餐時間等本機設定；flutter_secure_storage 與 local_auth 提供安全儲存及生物辨識能力，不代表所有雲端資料有額外應用層加密。
+2026-10-11，原生修正 `b607541`（基準 `6e190c3`）：修正前後本機 Flutter 全套 **119 項通過**；靜態分析 **0 error、13 warning、368 info**，均為既有問題。本輪 localhost rules 10 項、backend 假測試 7 項通過；先前亦以 FakeFirestore、假 AI transport、假排程器驗證一致性邊界；沒有以正式健康資料或真實 AI 驗證本階段。
 
-AIAssistantService 與 HealthAIAnalyzer 蒐集個人資料、健康、用藥、服藥及飲食紀錄供分析；實際請求內容會傳送至外部 AI 服務，正式產品需清楚告知並取得適當同意。
+用藥／處方一致性修正保留於 `4f19d64`、`efc572a`、`57a32ef`、`07d4dc5`、`acfe247`。`6e190c3` 的 Ubuntu CI 成功、artifact 數量 0；CI 保留分析、Flutter／backend／rules 測試，不做 iOS 原生建置或簽署。
 
-## 資料存取與目前限制
+整 App arm64 device 建置、iOS 16 實際執行、Xcode XCTest 與簽署皆未測；沒有新增 runtime／全域工具。已確認 plist 語法、權限說明及 App Group 交集，但這不代表平台授權、登入或正式服務可用。
 
-- settings 僅允許擁有者讀寫；prescriptions 尚未定義規則，呼叫儲存方法仍會被拒絕。
-- 家庭健康分享由資料擁有者的 family_members 文件授權，血糖／血壓查詢必須限定 category，用藥依分享權限讀取；日誌僅允許擁有者新增及讀取。
-- 接受邀請透過交易確認期限、對象及 pending 狀態，一次建立雙方關係。邀請者分享自己的資料；接受者預設不分享，需自行開啟。分享設定支援現有中文欄位別名。
-- 新家庭關係含 inviteId，規則以已接受的邀請驗證雙方關係。缺少此驗證紀錄的舊關係需雙方移除後重新綁定；不會自動信任原先寬鬆規則建立的資料。
-- 家庭移除一次刪除雙方關係；任何一方關係消失即停止授權。聊天室更新不可變更 members；新增訊息必須使用自己的 senderId。
-- users 基本文件仍允許所有已登入者讀取；健康或私人欄位與公開基本資料的拆分仍待後續處理。
-- Firestore 複合索引定義於 firestore.indexes.json；Storage rules 尚未納入。
-- `.env` 不再打包。debug 開發金鑰仍可由開發 APK 取得，僅供本機使用；release/profile 不讀取此金鑰，必須設定受驗證的後端。
-- 辨識結果需人工核對，尚無完整 OCR 正確率、藥品校驗或跨平台驗證證據。
+## 真機驗證清單
 
-## 測試狀態
+以測試帳號與虛構資料逐項驗證，正式服務操作另行授權：
 
-新增交易與同步測試及 Firestore 模擬器授權測試：
+1. 拒絕／允許通知；多療程達容量時核對顯示的期限與省略數。
+2. 關閉 App，跨日、隔日及每週提醒；取消、編輯、再服用與時區變更。
+3. 省電、長時間背景及重新開啟後補排，核對實際送達與日誌。
+4. 兩裝置離線服用／取消後重連；核對庫存、最終狀態及不完整依從率提示。
+5. 登出／換帳號時等待中的掃描、儲存、通知與 Widget 不沿用舊資料。
+6. 虛構處方掃描→確認→編輯／刪除→儲存；故意斷線重試，確認無重複／復活藥品。
+7. HealthKit、相機、登入及 App Groups 權限；模擬器不能證明其真機行為。
 
-```sh
-flutter test --no-pub
-npm install
-npm run test:rules
-```
-
-規則測試使用 demo-healthpal-priority1，本機需安裝 Firebase CLI 及其支援的 Java 版本。模擬器不會部署線上規則。正式規則需在新版應用及家庭關係重新綁定流程準備好後另行部署。
-
-widget_test.dart 驗證帳號切換會清除舊導覽與頁面狀態。priority_two_test.dart 驗證即時視窗的新增、更新、刪除、載入更多、延後訂閱、釋放、分類查詢，以及初始化合併與失敗重試。priority_three_test.dart 驗證小數劑量、未知處方拒絕轉換、欄位驗證、回應拒絕／截斷、HTTP 超時、限流、佇列上限、帳號切換及 AI 查詢範圍。functions/test 驗證驗證身分、額度與錯誤資訊清理。真機通知、實際 AI 辨識品質及跨平台建置仍需額外驗證。
-
-## 共用 AI 與資料結構
-
-AIService、OpenAIService 相容入口與 PrescriptionScanService 共用 AIClient／AIConfig，不再各自維護 HTTP 與金鑰狀態。提示詞、schema、資料驗證與處方轉換分開存放；既有畫面仍可使用 map adapter，並未全面重寫所有 UI 狀態管理。
-
-AIClient 同時最多 2 項工作、等候最多 8 項；每項傳送與重試共用 45 秒期限。只有明確 429 限流會等待 1–5 秒後重試一次；額度不足、逾時及其他失敗不重送。帳號變更會拒絕尚未發送的舊資料與舊結果。取消飲食分析會忽略後續結果；已傳送的遠端工作可能仍完成。
-
-NutritionAnalysis 要求真正布林值、必填文字、非負有限營養數字與 1–10 整數評分；非食物必須有說明。不再從敘述中猜 JSON，或用預設營養值補齊損壞回應。營養分析仍為模型估計，需由使用者確認。
-
-HealthContextRepository 共用有上限的查詢：健康最近 30 天最多 100 筆；服藥與飲食最近 7 天各最多 50 筆；藥品最多 100 筆。讀取失敗向上回報，不偽裝成沒有紀錄；超出範圍的歷史不會納入本次分析。
-
-## AI gateway 部署與開發設定
-
-`functions/` 使用 Node 22、Firebase Functions v2，部署區域 asia-east1。只接受非匿名 Firebase ID token，並驗證模型、訊息、圖片 data URI、token 與請求大小；不接受外部圖片網址。伺服器在 Secret Manager 讀取 OPENAI_API_KEY，錯誤回應不暴露上游文字或金鑰。
-
-Firestore 交易限額：每位使用者每分鐘 10 次、每日 50 次，整個專案每日 1000 次；日期以 UTC 計算。請求開始即計數，失敗不退還。`_ai_usage` 只有 Admin SDK 使用，客戶端規則預設拒絕。此限制控制請求數，並不等同供應商費用上限；正式運作仍需監控費用。
-
-```sh
-npm --prefix functions ci
-npm --prefix functions test
-firebase functions:secrets:set OPENAI_API_KEY --project health-management-f046a
-firebase deploy --only functions:healthpal-ai --project health-management-f046a
-flutter build apk --release --dart-define=AI_GATEWAY_URL=https://YOUR_DEPLOYED_ENDPOINT
-```
-
-部署需先完成專案的 Cloud Functions API 與必要計費設定。後端已於 2026-10-11（台北時間）部署，伺服器金鑰由 Secret Manager 管理。端點為 `https://asia-east1-health-management-f046a.cloudfunctions.net/healthAI`，AIConfig 將其作為預設，可用編譯設定覆寫；更換 Firebase 專案時需部署自己的函式並更新端點。本機 debug 使用 `.env.development.json` 與 `--dart-define-from-file`，檔案被 Git 忽略；也可在 debug 設定 gateway 直接測試登入驗證。
-
-## 持續驗證
-
-`.github/workflows/validate.yml` 使用 Flutter 3.41.9、Node 22、Java 21，執行 Flutter 測試、AI gateway 測試、Firestore 規則模擬器及 Android debug 建置。靜態分析遇到 error 會失敗，既有 warning/info 尚未全部清理。`tool/bootstrap_ci.py` 僅在 CI 產生缺少的公開 demo Firebase 設定，不替換既有設定，不包含正式憑證；CI APK 不用於正式服務。
-
-Android 建置使用 Gradle 8.14、AGP 8.13.1、Kotlin 2.3.20，Java/Kotlin target 17。依健康套件需求設定 minSdk 26（Android 8.0），並啟用通知套件要求的 core library desugaring。Kotlin／Gradle 相容範圍參考 [Kotlin 官方文件](https://kotlinlang.org/docs/gradle-configure-project.html)。
-
-線上驗證已確認：未登入與無效 token 回傳 401、不合法請求回傳 400、臨時非匿名帳號可取得 GPT-4o 回應（200）。專案本身停用匿名註冊，匿名 token 拒絕行為另有離線測試。測試帳號及個別額度文件已清除；線上測試不含健康紀錄。部署映像設定 7 天清理政策，不維持常駐最小實例；既有每分鐘與每日請求限額保持不變。
-
-## 用藥交易與通知一致性修正
-
-服藥交易保存每個時段當天的 `intake_receipts`（原單次劑量及實際庫存扣除量），取消時回補原扣除量。庫存不足或不追蹤庫存（0）的藥品不會因取消而增加虛構庫存；服用後修改劑量仍使用原紀錄取消。舊版已服用資料若缺少明細，會拒絕猜測回補，提示核對紀錄與庫存。重複提醒時段不得記錄，避免混淆明細。
-
-編輯藥品使用 transaction，只合併表單實際修改的欄位，保留最新庫存、服藥狀態、未知欄位與扣除明細。同欄位的併發修改會提示重新載入；重排時段按時間保留最新服藥狀態。當天已服用時段必須先取消紀錄，才可移除或更改時間。
-
-處方 batch 儲存後回傳真正的 Firestore 藥品 ID；處方確認及用藥清單使用同一組可重現通知 ID。每時段保留 64 個通知 ID，涵蓋正常及最多 50 次漏服提醒。更新／刪除／關閉提醒依待發通知的 payload 清除整個藥品，不受新時段數或目前漏服次數設定影響；同時辨識舊版以藥名生成的 payload。舊版同名藥品通知無法分辨來源，恢復通知時會依各藥品文件重新排程。首次載入恢復與後续操作依序執行，已服用時段不重建提醒。
-
-`medication_consistency_test.dart` 驗證庫存不足與零庫存取消、服用後修改劑量、併發編輯、時段重排、舊明細保護、通知 ID 與舊版／漏服 payload 清除範圍。實機通知送達仍需裝置驗證。以下延伸第 5–7 點修正，保留前述庫存交易、併發合併與舊通知清理保護。
-
-
-## 療程排程、依從率與處方來源（第 5–7 點，本機修正）
-
-`MedicationRegimen` 共用日曆規則：開始日含當天，結束日為開始日加療程天數的午夜（不含）；隔日及每週一次以開始日為錨點。每天、QD/BID/TID/QID、明確的每 6/8/12/24 小時時段沿既存已確認時刻處理。PRN 不建立固定應服時段。療程天數不明、頻率不明、重複時刻或時段數不符不猜測；每週兩次但沒有指定星期的資料需人工確認，不能自動推定間隔。取消已記錄服藥可在修改療程後執行，仍按原明細回補；非應服日期不能新增固定時段服藥紀錄。
-
-`MedicationReminderScheduler` 在帳號層接收完整藥品快照；所有新增／處方儲存入口共用此排程，不再由頁面各自建立今天或明天的通知。啟動、資料／設定更新、回到前景及前景每小時重建未來最多 30 個日曆日的單次通知。今日已服用只略過今日該時段，不略過後续日期；取消後只恢復仍在未來的正常／漏服提醒。漏服提醒不越過下一劑、午夜或療程結束，持續模式每劑最多 50 次。payload 包含真正的文件 ID 與應服日期時刻，每個日期時段預留 64 個 ID；重建時清除所有舊用藥 payload（含舊藥名 payload），保留其他類型通知。更新以版本號及串列佇列排除陳舊工作，切換帳號先等待進行中的原生呼叫結束再清除。
-
-**裝置限制**：規劃時以 60 則待發通知為保守總預算，扣除既有非用藥通知，按時間由近至遠排入。容量不足顯示省略數與最早未排時間，不承諾全療程已排妥；大量漏服提醒可大幅縮短涵蓋日期。用藥頁顯示排程期限、容量、未知療程及排程失敗。App 結束後原生已排日期可發送，但沒有新增背景工作器，不能無限補排；須在容量／30 天期限前重新開啟 App。Android 新增排程與開機接收器，採 `inexactAllowWhileIdle`，不依賴精準鬧鐘特殊授權，送達可被系統延後。其他模組另行新增通知與 OEM 限制仍需真機確認；Web 不支援此本機排程。
-
-`regimen_history` 在新增藥品及首次服藥時開始追蹤，療程欄位修改在同一交易附加版本，不追溯捏造舊歷史；最多保留 32 個版本，較早時期視為未知。新操作保存 `scheduled_at` 與文件交易遞增的 `operation_sequence`；依從率按應服日期與時刻彙整，採交易順序最後狀態，避免服用再取消被計成 50%，也避免依裝置時間排序誤判。今天及前 6 個日曆日只計已到期的固定應服時段，沒有操作的時段仍在分母；關閉提醒不減少分母。
-
-AI 小助手與健康分析共用 `calculateMedicationAdherence`，顯示目前仍存在藥品的「紀錄完成率」，不等同實際吞服，也不含刪除藥品及 PRN。查詢服藥日誌上限 50、藥品上限 100，各多讀一筆判斷截斷，保存查詢範圍與文件 ID。紀錄截斷、歷史缺漏／截斷、舊操作沒有應服時段或交易順序、無法解析療程、狀態無對應紀錄時，不輸出精確百分比，只回報可重建部分及限制，並要求 AI 不推算百分比。沒有應服時段亦不輸出百分比。
-
-`PrescriptionDraftEntry` 將藥品與來源放在同一筆草稿；刪除及編輯依 entry 身分操作，轉換前才產生對應的索引 map。同名藥品、刪除中間藥品、清除來源不會影響其他筆來源。批次儲存回傳 ID、來源及療程歷史可用假 Firestore 完整驗證，測試的 AI transport 禁止任何實際呼叫。
-
-本次驗證只使用 FakeFirebaseFirestore、MockClient、記憶體排程器、localhost Firestore 模擬器與 demo-healthpal-priority1。沒有啟動 App 連線、呼叫正式 API、讀取健康資料、部署或改變 AI／計費設定，沒有安裝工具。規則模擬器可用已快取 JAR 與既有 Java 23，指定 `-Duser.language=en -Duser.country=US`，避免預設 Java 20 及繁中資源問題。新增回歸測試位於 `test/medication_567_test.dart`；既有劑量測試的每日兩次假資料補齊第二個時段，保留原測試意義。
-
-尚需真機驗證：通知權限拒絕／允許、App 關閉後跨日與跨週送達、Android 重開機／省電／OEM 行為、iOS 容量、取消／編輯同步與時區／夏令時間變更。未做正式雲端或真實 AI 整合測試；本機 Android SDK 不完整，不下載工具也不執行原生 APK 建置。
-
-
-### 依從率快照一致性審查補正
-
-藥品與日誌是非原子並行查詢，`times_status=false` 但查詢只看見之前的服用操作，可能是取消紀錄尚未可見，或取消裝置的 `intake_time` 超前於分析裝置而被查詢截止時間排除。純假資料回歸已先重現原邏輯誤報 100%。今日已到期、且 `lastUpdated` 為今天的時段改為双向核對：狀態與日誌最終服用狀態任一方向不一致，或應服時段的狀態不存在、不完整、不是布林值，都標示資料不完整並禁止精確百分比；保留可见紀錄計數，不捏造取消操作。沒有操作且狀態 false 是合法未記錄時段；未來、非療程日期與昨天的旗標不套用今日核對。
-
-新增 9 項快照一致性回歸，包含假 Firestore 查詢排除超前取消操作的完整流程。最終本機檢查：5–7 相關 41 項、Flutter 全套 86 項、本機規則 9 項、伺服器模擬測試 7 項全通過；靜態分析 0 error、13 warning、368 info。本批未連正式雲端／真實 AI，未安裝套件，未修改 workflow、artifact 或計費設定；僅建立本機 commit，不推送或部署。
+62 個已追蹤 `ios/build` 快取的取消追蹤與 ignore 方案另行準備，尚未套用；公開歷史不改。隱私政策與法律文字保持原樣。

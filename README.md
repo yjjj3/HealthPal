@@ -1,56 +1,46 @@
-# HealthPal — 個人健康管理
+# HealthPal
 
-以 Flutter 與 Firebase 開發，整合健康紀錄、用藥、飲食、家庭聯繫與 AI 分析。本儲存庫收錄現有原始碼；完整建置與正式部署尚未驗證。
+以 iOS 為目標的 Flutter 個人健康管理專案：把健康紀錄、用藥與飲食整理成可追蹤的日常流程。
 
 ## 功能
 
-- 健康紀錄、趨勢圖表與 AI 健康分析。
-- 處方箋／藥袋圖片辨識、藥品確認、服藥提醒及日誌。
-- 飲食紀錄、餐點影像分析與營養估算。
-- 家庭邀請、成員管理與聊天室。
-- PDF 報告、資料匯出與分享。
-- Email、Google、Apple 登入，生物辨識與工作階段逾時。
-- Apple HealthKit／Android Health Connect 健康資料讀取與同步。
+- 健康紀錄、趨勢圖表、Apple HealthKit 同步與 PDF 匯出。
+- 處方圖片辨識、人工確認、療程提醒、服藥紀錄與庫存交易。
+- 飲食紀錄、營養估算與 AI 健康分析。
+- 家庭分享、聊天室、Apple／Google／Email 登入與生物辨識。
 
-## 技術組成
+AI 結果須人工核對；紀錄完成率不等同實際服藥，也不是醫療診斷。
 
-| 領域 | 技術 |
-| --- | --- |
-| UI | Flutter、Material、Google Fonts、繁體中文／英文語系 |
-| 後端 | Firebase Auth、Cloud Firestore、Firebase Storage |
-| AI | 共用 HTTP client、嚴格 JSON schema、Firebase AI gateway；模型 gpt-4o |
-| 通知 | Firebase Messaging、flutter_local_notifications、timezone |
-| 本機資料 | SharedPreferences、flutter_secure_storage、local_auth |
-| 健康平台 | health、permission_handler |
-| 圖表與報告 | fl_chart、pdf、printing、share_plus |
-| 相機與 QR | image_picker、mobile_scanner、qr_flutter |
+## 技術
 
-Dart SDK 要求為 `>=3.9.0 <4.0.0`；套件版本以 `pubspec.lock` 為準。
+Flutter／Dart、Firebase Auth／Firestore／Storage、受驗證的 AI gateway、HealthKit、WidgetKit、本機通知。交易維持服用／取消與庫存一致，帳號切換隔離頁面與非同步工作，處方重試使用固定 ID 與批次標記。詳見 [技術細節](docs/TECHNICAL_DETAILS.md)。
 
-## 本機啟動
+## iOS 開發
 
-1. 安裝相容的 Flutter SDK 與目標平台工具鏈。
-2. 執行 `flutter pub get`。
-3. 執行 `cp .env.development.example.json .env.development.json`，將 `AI_GATEWAY_URL` 設為自己的已部署端點；此檔不提交 Git。本專案預設使用下方 HealthPal 線上端點，不需本機 OpenAI 金鑰；若要直接測試 OpenAI，僅在 debug 將 gateway 留空並填入開發用金鑰。
-4. 在自己的 Firebase 專案啟用 Authentication、Firestore 與 Storage，透過 FlutterFire CLI 執行 `flutterfire configure`，產生 `lib/firebase_options.dart` 與平台設定。這些本機設定不提交 Git。
-5. `firebase.json` 保留原專案 FlutterFire 對應資料，請重新產生為自己的設定；部署前檢查技術文件中的規則限制，並明確指定自己的 Firebase 專案。
-6. 設定 Google／Apple 登入、相機、通知、健康平台權限，再執行 `flutter run --dart-define-from-file=.env.development.json`，或使用 VS Code 的「HealthPal 開發」設定。
+使用相容 Flutter、Xcode 與 CocoaPods；版本依 `pubspec.lock`、`ios/Podfile.lock`，不要先升級套件。
 
-`.env` 已移除 Flutter assets。直接呼叫 OpenAI 僅允許 debug；正式版使用 `--dart-define=AI_GATEWAY_URL=https://...`，金鑰由 Cloud Functions Secret Manager 保管。`functions/` 已提供驗證 Firebase ID token 與限制額度的後端，部署與設定方式見技術文件。本專案已部署預設端點；更換 Firebase 專案時必須以 `AI_GATEWAY_URL` 覆寫為自己的後端。
+```sh
+flutter pub get --enforce-lockfile
+cd ios && pod install --deployment && cd ..
+flutter build ios --simulator --debug --no-codesign --no-pub
+python3 tool/check_ios_compatibility.py
+```
 
-## 目錄與驗證
+建置不會安裝或啟動 App。目前原生建置限制見技術文件；Ubuntu CI 綠燈不代表 iOS 建置或真機測試通過。
 
-`lib/screens` 為畫面、`lib/services` 為服務、`lib/models` 為資料模型、`lib/widgets` 為共用元件、`lib/theme` 為視覺設定。`main.dart` 負責初始化、登入狀態與主導覽。
+自行準備 Firebase 平台設定與登入／HealthKit／App Groups 能力。常用 Firebase 設定與本機環境檔已有 ignore 規則，但新增檔案仍須檢查追蹤狀態與內容。AI 使用自己的受驗證 gateway，透過未追蹤的 `.env.development.json` 設定 `AI_GATEWAY_URL`。請勿把 API 金鑰、服務帳號、簽署憑證或真實健康樣本放入原始碼、assets 或公開文件。Firebase client 識別設定不是伺服器秘密，但仍需限制金鑰並驗證規則。
+
+## 驗證
 
 ```sh
 flutter analyze --no-pub
 flutter test --no-pub
+npm ci
+npm --prefix functions ci
+npm --prefix functions test
+npm run test:rules
 ```
 
-測試涵蓋資料交易、小數劑量、AI 回應驗證、限流與超時、即時分頁、初始化重試與帳號切換；Firestore 規則另以 `npm run test:rules` 在模擬器驗證。雖包含 Android、iOS、Web 與桌面平台資料夾，部分服務使用 `dart:io` 或裝置專屬套件，各平台需另外驗證。
+上述 npm ci 依 package-lock.json 安裝依賴。規則測試另需已安裝的 Firebase CLI 與 Java 21 以上、相容的 Firestore emulator；缺少 emulator 時 CLI 可能下載，執行前確認環境。測試指定 demo-healthpal-priority1，只使用本機模擬器；Flutter 測試使用假資料。GitHub 的 Ubuntu CI 執行 Flutter 分析／測試、backend 與 Firestore rules 驗證，不產生 APK、不驗證 iOS 原生建置。
 
-詳見 [技術細節](docs/TECHNICAL_DETAILS.md)。
-
-GitHub Actions 會執行靜態分析、Flutter／後端／Firestore 規則測試及 Android debug 建置。CI 使用公開 demo Firebase 設定，產出的 APK 只供建置驗證，未連接正式服務。
-
-AI 端點已於 2026-10-11（台北時間）部署至 `asia-east1`：`https://asia-east1-health-management-f046a.cloudfunctions.net/healthAI`。新版 App 預設走此端點，需登入本專案的 Firebase 帳號；舊版 App 需重新建置／更新才能使用。
+真機待驗：通知權限與容量、App 關閉後跨日／跨週提醒、省電及時區變化、跨裝置離線同步、HealthKit、登入與 Widget 更新。請使用測試帳號與虛構資料。
