@@ -154,3 +154,19 @@ test('bounded queries preserve owner and category-based family authorization', a
   await assertFails(getDocs(query(collection(dbFor('mallory'), 'chats/alice_bob/messages'),
     orderBy('timestamp', 'desc'), limit(50))));
 });
+
+test('prescription commit receipt survives medicine deletion and stays owner-only', async () => {
+  const alice = dbFor('alice');
+  const receipt = doc(alice, 'users/alice/settings/prescription_save_reserved');
+  const medicine = doc(alice, 'users/alice/medicine/reserved');
+  await assertSucceeds(runTransaction(alice, async (tx) => {
+    assert.equal((await tx.get(receipt)).exists(), false);
+    assert.equal((await tx.get(medicine)).exists(), false);
+    tx.set(receipt, {medicine_ids: ['reserved'], committed_at: Timestamp.now()});
+    tx.set(medicine, {name: 'fake', frequency: '每天1次', times_status: [false]});
+  }));
+  await assertSucceeds(deleteDoc(medicine));
+  assert.equal((await assertSucceeds(getDoc(receipt))).exists(), true);
+  await assertFails(getDoc(doc(dbFor('bob'), receipt.path)));
+  await assertFails(deleteDoc(doc(dbFor('bob'), receipt.path)));
+});

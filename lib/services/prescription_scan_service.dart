@@ -283,21 +283,52 @@ class PrescriptionScanService {
     if (refs.map((r) => r.id).toSet().length != refs.length) {
       throw StateError('藥品文件 ID 重複。');
     }
+    if (prepared.isEmpty) {
+      return [];
+    }
+    final ids = refs.map((r) => r.id).toList()..sort();
+    final receiptRef = _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('settings')
+        .doc('prescription_save_${ids.first}');
     final createdAt = _now();
     return _firestore.runTransaction((tx) async {
+      final receipt = await tx.get(receiptRef);
       final snapshots = <DocumentSnapshot<Map<String, dynamic>>>[];
       for (final ref in refs) {
         snapshots.add(await tx.get(ref));
       }
       if (!active()) throw StateError('帳號或頁面已變更，處方未送出。');
+      if (receipt.exists) {
+        final recordedIds = receipt.data()?['medicine_ids'];
+        if (recordedIds is! List ||
+            recordedIds.length != ids.length ||
+            List.generate(
+              ids.length,
+              (i) => recordedIds[i] == ids[i],
+            ).contains(false)) {
+          throw StateError('處方提交紀錄不一致，請核對用藥清單。');
+        }
+        if (!snapshots.every((s) => s.exists)) {
+          throw StateError('此批處方已儲存，部分或全部藥品已刪除；重試不會重新新增，請核對用藥清單。');
+        }
+        return snapshots.map(medicine.fromFirestore).toList();
+      }
+      final receiptData = {
+        'medicine_ids': ids,
+        'committed_at': Timestamp.fromDate(createdAt),
+      };
       if (snapshots.any((s) => s.exists)) {
         if (!snapshots.every((s) => s.exists)) {
           throw StateError('處方文件不完整，請核對用藥清單。');
         }
         // A commit may succeed while its acknowledgement is lost. Never
         // overwrite live stock/history when retrying the same reserved IDs.
+        tx.set(receiptRef, receiptData);
         return snapshots.map(medicine.fromFirestore).toList();
       }
+      tx.set(receiptRef, receiptData);
       for (var i = 0; i < prepared.length; i++) {
         tx.set(refs[i], medicationCreationData(prepared[i], createdAt));
       }
