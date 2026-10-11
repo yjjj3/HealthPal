@@ -20,6 +20,7 @@ class medicine {
   final int duration_days;
   final DateTime lastUpdated;
   final bool reminderEnabled;
+  final int intakeSequence;
   final String? source;          // 來源（藥局/醫院）
   final String? clinicalUse;    // 臨床用途
   final String? sideEffects;    // 副作用
@@ -44,6 +45,7 @@ class medicine {
     required this.duration_days,
     DateTime? lastUpdated,
     this.reminderEnabled = true,
+    this.intakeSequence = 0,
     this.source,
     this.clinicalUse,
     this.sideEffects,
@@ -125,6 +127,7 @@ class medicine {
       start_date: startDate,
       lastUpdated: lastUpdated,
       reminderEnabled: reminderEnabled,
+      intakeSequence: data['intake_sequence'] as int? ?? 0,
       source: data['source'] as String?,
       clinicalUse: data['clinicalUse'] as String?,
       sideEffects: data['sideEffects'] as String?,
@@ -151,6 +154,7 @@ class medicine {
       "duration_days": duration_days,
       "lastUpdated": Timestamp.fromDate(lastUpdated),
       "reminderEnabled": reminderEnabled,
+      if (intakeSequence > 0) "intake_sequence": intakeSequence,
       if (source != null) "source": source,
       if (clinicalUse != null) "clinicalUse": clinicalUse,
       if (sideEffects != null) "sideEffects": sideEffects,
@@ -204,6 +208,7 @@ class medicine {
       duration_days: duration_days ?? this.duration_days,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      intakeSequence: intakeSequence,
       source: source ?? this.source,
       clinicalUse: clinicalUse ?? this.clinicalUse,
       sideEffects: sideEffects ?? this.sideEffects,

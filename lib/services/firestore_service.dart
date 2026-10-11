@@ -83,15 +83,27 @@ class FirestoreService {
         timeSlotIndex >= medication.times_status.length ||
         timeSlotIndex >= medication.times_of_day_list.length)
       throw StateError('服藥時段不存在。');
-    final taking =
-        calendarDay(_now()).isAfter(calendarDay(medication.lastUpdated)) ||
-        !medication.times_status[timeSlotIndex];
+    final operationDay = calendarDay(_now());
+    if (medication.times_status[timeSlotIndex] &&
+        calendarDay(medication.lastUpdated) != operationDay) {
+      throw StateError('已跨日，請重新載入今天的服藥狀態。');
+    }
+    final taking = !medication.times_status[timeSlotIndex];
     final owner = _firestore.collection('users').doc(uid);
     final ref = owner.collection('medicine').doc(id);
     await _firestore.runTransaction((tx) async {
       final snapshot = await tx.get(ref);
       if (_currentUid != uid || !snapshot.exists) throw StateError('帳號或藥品已變更。');
       final current = medicine.fromFirestore(snapshot);
+      final now = _now();
+      if (calendarDay(now) != operationDay) {
+        throw StateError('操作期間已跨日，請重新載入。');
+      }
+      // A boolean alone cannot detect take/cancel/take (ABA). Preserve the
+      // generation from the initiating screen across transaction retries.
+      if (current.intakeSequence != medication.intakeSequence) {
+        throw StateError('用藥操作已在其他畫面更新，請重新載入。');
+      }
       final times = current.times_of_day_list;
       if (times.map((t) => '${t.hour}:${t.minute}').toSet().length !=
           times.length)
@@ -104,8 +116,7 @@ class FirestoreService {
               medication.times_of_day_list[timeSlotIndex].minute) {
         throw StateError('服藥時段已變更，請重新載入。');
       }
-      final status =
-          calendarDay(_now()).isAfter(calendarDay(current.lastUpdated))
+      final status = calendarDay(now).isAfter(calendarDay(current.lastUpdated))
           ? List<bool>.filled(times.length, false)
           : List<bool>.from(current.times_status);
       if (status[timeSlotIndex] == taking) throw StateError('用藥狀態已更新，請重新載入。');
@@ -113,7 +124,6 @@ class FirestoreService {
       final dose = current.total_pills.toDouble();
       if (!stock.isFinite || stock < 0 || !dose.isFinite || dose <= 0)
         throw StateError('劑量或庫存無效。');
-      final now = _now();
       if (taking && !MedicationRegimen(current).includesDay(now)) {
         throw StateError('今天不在此藥品的應服日期內。');
       }

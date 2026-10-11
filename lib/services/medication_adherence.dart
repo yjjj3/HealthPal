@@ -115,6 +115,7 @@ MedicationAdherence calculateMedicationAdherence(Map<String, dynamic> context) {
     }
   }
   final states = <String, ({int sequence, bool taken})>{};
+  final visibleSequences = <String, int>{};
   for (final item in logs) {
     final log = item as Map;
     final id = log['medicine_id'];
@@ -132,6 +133,8 @@ MedicationAdherence calculateMedicationAdherence(Map<String, dynamic> context) {
       continue;
     }
     if (at.isAfter(now) || at.isBefore(from)) continue;
+    final previousSequence = visibleSequences[id] ?? 0;
+    if (sequence > previousSequence) visibleSequences[id as String] = sequence;
     if (due.isAfter(now) || due.isBefore(from)) continue;
     final key = occurrenceKey(id as String, due);
     if (!expected.contains(key)) {
@@ -154,6 +157,18 @@ MedicationAdherence calculateMedicationAdherence(Map<String, dynamic> context) {
   for (final item in medications) {
     final med = item as Map;
     final updated = contextDate(med['lastUpdated']);
+    final sequence = med['intake_sequence'];
+    // When the document's last operation is within this query window, its
+    // counter must agree with the latest visible operation, even on prior days.
+    // Counters outside the window and legacy absent counters prove no gap.
+    if (sequence is int &&
+        sequence > 0 &&
+        updated != null &&
+        !updated.isBefore(from) &&
+        (updated.isAfter(now) ||
+            visibleSequences[med['medicine_id']] != sequence)) {
+      issues.add('藥品與操作紀錄的交易順序不一致或紀錄缺漏');
+    }
     if (updated == null || calendarDay(updated) != calendarDay(now)) continue;
     final times = med['times_of_day_list'] as List? ?? [];
     final status = med['times_status'];
