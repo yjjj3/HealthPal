@@ -15,6 +15,8 @@ AI 結果須人工核對；紀錄完成率不等同實際服藥，也不是醫�
 
 Flutter／Dart、Firebase Auth／Firestore／Storage、受驗證的 AI gateway、HealthKit、WidgetKit、本機通知。交易維持服用／取消與庫存一致，帳號切換隔離頁面與非同步工作，處方重試使用固定 ID 與批次標記。詳見 [技術細節](docs/TECHNICAL_DETAILS.md)。
 
+工程問題、設計取捨與驗證證據見 [工程案例紀錄](docs/ENGINEERING_CASE_STUDIES.md)。
+
 ## iOS 開發
 
 先準備相容 Flutter、Xcode、CocoaPods，以及 Firebase CLI／FlutterFire CLI（若尚未產生 Firebase 設定）。版本依 `pubspec.lock`、`ios/Podfile.lock`，不要先升級套件。
