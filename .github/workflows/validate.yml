@@ -32,8 +32,3 @@ jobs:
       - run: npm --prefix functions test
       - run: npm install -g firebase-tools@15.1.0
       - run: npm run test:rules
-      - run: flutter build apk --debug --no-pub
-      - uses: actions/upload-artifact@v4
-        with:
-          name: healthpal-debug-demo
-          path: build/app/outputs/flutter-apk/app-debug.apk
