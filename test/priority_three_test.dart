@@ -254,8 +254,11 @@ void main() {
         total_supply: 10,
         total_pills: 0.5,
         frequency: '每天2次',
-        times_of_day_list: [DateTime.now()],
-        times_status: [false],
+        times_of_day_list: [
+          DateTime.now(),
+          DateTime.now().add(const Duration(hours: 12)),
+        ],
+        times_status: [false, false],
         instruction: '飯後',
         route: '口服',
         remaining_days: 10,

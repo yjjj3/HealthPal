@@ -1,4 +1,4 @@
-import '../utils/medication_schedule.dart';
+import '../models/prescription_draft.dart';
 import '../models/medication_dose.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // lib/screens/prescription_confirm_screen.dart
@@ -10,7 +10,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_dimensions.dart';
 import '../models/prescription_model.dart';
 import '../services/prescription_scan_service.dart';
-import '../services/notification_service.dart';
 
 class PrescriptionConfirmScreen extends StatefulWidget {
   final List<PrescriptionMedicine> medicines;
@@ -31,42 +30,34 @@ class PrescriptionConfirmScreen extends StatefulWidget {
 
 class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
   final PrescriptionScanService _scanService = PrescriptionScanService();
-  late List<PrescriptionMedicine> _medicines;
-  final Map<int, String> _sources = {};
+  late PrescriptionDraft _draft;
+  List<PrescriptionMedicine> get _medicines => _draft.medicines;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _medicines = List.from(widget.medicines);
-    // 若 AI 有辨識到醫院名，預填給每個藥品
-    final hospitalName = widget.hospitalInfo?['hospitalName'] as String?;
-    if (hospitalName != null) {
-      for (int i = 0; i < widget.medicines.length; i++) {
-        _sources[i] = hospitalName;
-      }
-    }
+    _draft = PrescriptionDraft(
+      widget.medicines,
+      source: widget.hospitalInfo?['hospitalName'] as String?,
+    );
   }
 
   // ============================================================
   // 編輯藥品
   // ============================================================
   void _editMedicine(int index) {
+    final entry = _draft.entries[index];
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _MedicineEditSheet(
-        medicine: _medicines[index],
-        initialSource: _sources[index],
+        medicine: entry.medicine,
+        initialSource: entry.source,
         onSave: (updatedMedicine, updatedSource) {
           setState(() {
-            _medicines[index] = updatedMedicine;
-            if (updatedSource != null) {
-              _sources[index] = updatedSource;
-            } else {
-              _sources.remove(index);
-            }
+            _draft.update(entry, updatedMedicine, updatedSource);
           });
         },
       ),
@@ -79,6 +70,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
   num _calcDisplayQty(PrescriptionMedicine med) => med.totalQuantity;
 
   void _deleteMedicine(int index) {
+    final entry = _draft.entries[index];
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -92,7 +84,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
           TextButton(
             onPressed: () {
               setState(() {
-                _medicines.removeAt(index);
+                _draft.remove(entry);
               });
               Navigator.pop(context);
             },
@@ -130,36 +122,13 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
       final medications = await _scanService.convertToMedications(
         _medicines,
         settings,
-        sources: _sources,
+        sources: _draft.sources,
       );
       if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
-      final savedMedications = await _scanService.saveMedications(medications);
+      await _scanService.saveMedications(medications);
       if (!mounted || FirebaseAuth.instance.currentUser?.uid != uid) return;
 
-      // 排程提醒通知
-      try {
-        final notificationService = NotificationService();
-        for (final med in savedMedications) {
-          for (int j = 0; j < med.times_of_day_list.length; j++) {
-            final scheduledTime = med.times_of_day_list[j];
-            final now = DateTime.now();
-            var reminderTime = DateTime(now.year, now.month, now.day,
-                scheduledTime.hour, scheduledTime.minute);
-            if (reminderTime.isBefore(now)) {
-              reminderTime = reminderTime.add(const Duration(days: 1));
-            }
-            await notificationService.scheduleMedicationReminder(
-              id: medicationNotificationId(med.medicine_id!, j),
-              medicineName: med.name,
-              dosage: med.dosage,
-              scheduledTime: reminderTime,
-              medicationId: med.medicine_id!,
-            );
-          }
-        }
-      } catch (e) {
-        debugPrint('排程通知失敗（不影響儲存）: $e');
-      }
+      // Account-level notification listener schedules the saved document IDs.
 
       if (mounted) {
         Navigator.popUntil(context, (route) => route.isFirst);
@@ -233,11 +202,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
       color: AppColors.primaryLight,
       child: Row(
         children: [
-          const Icon(
-            Icons.local_hospital,
-            color: AppColors.primary,
-            size: 24,
-          ),
+          const Icon(Icons.local_hospital, color: AppColors.primary, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -278,11 +243,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.event,
-                    color: AppColors.warning,
-                    size: 16,
-                  ),
+                  const Icon(Icons.event, color: AppColors.warning, size: 16),
                   const SizedBox(width: 4),
                   Text(
                     '回診: ${info['followUpDate']}',
@@ -305,26 +266,16 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.medication_outlined,
-            size: 64,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.medication_outlined, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             '沒有辨識到藥品',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
           Text(
             '請嘗試重新拍攝處方箋',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
       ),
@@ -335,8 +286,8 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
     final confidenceColor = medicine.confidence >= 0.8
         ? AppColors.success
         : medicine.confidence >= 0.5
-            ? AppColors.warning
-            : Colors.red;
+        ? AppColors.warning
+        : Colors.red;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -411,8 +362,10 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
                 ),
                 // 信心度指示
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: confidenceColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -465,7 +418,10 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
                   children: [
                     _buildInfoItem('天數', '${medicine.durationDays} 天'),
                     const SizedBox(width: 24),
-                    _buildInfoItem('總量', '${_calcDisplayQty(medicine)} ${medicine.unit}'),
+                    _buildInfoItem(
+                      '總量',
+                      '${_calcDisplayQty(medicine)} ${medicine.unit}',
+                    ),
                     if (medicine.drugCode.isNotEmpty) ...[
                       const SizedBox(width: 24),
                       _buildInfoItem('代碼', medicine.drugCode),
@@ -561,9 +517,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
                   onPressed: () => _deleteMedicine(index),
                   icon: const Icon(Icons.delete, size: 18),
                   label: const Text('刪除'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
                 ),
               ],
             ),
@@ -605,10 +559,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
         ),
         Text(
           value,
@@ -647,11 +598,7 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.medication,
-                size: 20,
-                color: AppColors.primary,
-              ),
+              Icon(Icons.medication, size: 20, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 '共 ${_medicines.length} 種藥品',
@@ -685,8 +632,9 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
-                  onPressed:
-                      _medicines.isNotEmpty ? _proceedToMealTimeSettings : null,
+                  onPressed: _medicines.isNotEmpty
+                      ? _proceedToMealTimeSettings
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -699,7 +647,10 @@ class _PrescriptionConfirmScreenState extends State<PrescriptionConfirmScreen> {
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         )
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -768,7 +719,17 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
 
   final List<String> _mealSessions = ['不限', '早餐', '午餐', '晚餐', '睡前'];
   final List<String> _mealTimings = ['請確認', '飯前', '飯後', '隨餐', '空腹', '不限'];
-  final List<String> _routes = ['請確認', '口服', '外用', '注射', '吸入', '點眼', '栓劑', '點滴', '其他'];
+  final List<String> _routes = [
+    '請確認',
+    '口服',
+    '外用',
+    '注射',
+    '吸入',
+    '點眼',
+    '栓劑',
+    '點滴',
+    '其他',
+  ];
 
   final List<String> _units = ['請確認', '顆', '粒', 'ml', '包', '片', '錠'];
   final List<String> _frequencies = [
@@ -791,19 +752,25 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
     // 若 AI 有給總數量就用，否則用推算值（劑量×次數×天數）
     final aiQty = widget.medicine.totalQuantity;
     _totalQuantityController = TextEditingController(text: '$aiQty');
-    _durationController =
-        TextEditingController(text: '${widget.medicine.durationDays}');
+    _durationController = TextEditingController(
+      text: '${widget.medicine.durationDays}',
+    );
     _sourceController = TextEditingController(text: widget.initialSource ?? '');
-    _clinicalUseController =
-        TextEditingController(text: widget.medicine.clinicalUse ?? '');
-    _sideEffectsController =
-        TextEditingController(text: widget.medicine.sideEffects ?? '');
-    _precautionsController =
-        TextEditingController(text: widget.medicine.precautions ?? '');
-    _storageMethodController =
-        TextEditingController(text: widget.medicine.storageMethod ?? '');
-    _appearanceController =
-        TextEditingController(text: widget.medicine.appearance ?? '');
+    _clinicalUseController = TextEditingController(
+      text: widget.medicine.clinicalUse ?? '',
+    );
+    _sideEffectsController = TextEditingController(
+      text: widget.medicine.sideEffects ?? '',
+    );
+    _precautionsController = TextEditingController(
+      text: widget.medicine.precautions ?? '',
+    );
+    _storageMethodController = TextEditingController(
+      text: widget.medicine.storageMethod ?? '',
+    );
+    _appearanceController = TextEditingController(
+      text: widget.medicine.appearance ?? '',
+    );
 
     _selectedUnit = _units.contains(widget.medicine.unit)
         ? widget.medicine.unit
@@ -821,8 +788,12 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
     final timingPart = sessionMatch != '不限'
         ? rawTiming.replaceFirst(sessionMatch, '')
         : rawTiming;
-    _selectedMealTiming = _mealTimings.contains(timingPart) ? timingPart : '請確認';
-    _selectedRoute = _routes.contains(widget.medicine.route) ? widget.medicine.route : '請確認';
+    _selectedMealTiming = _mealTimings.contains(timingPart)
+        ? timingPart
+        : '請確認';
+    _selectedRoute = _routes.contains(widget.medicine.route)
+        ? widget.medicine.route
+        : '請確認';
     _selectedStartDate = widget.medicine.startDate;
   }
 
@@ -845,9 +816,22 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
     final doseError = MedicationDose.validate(_dosageController.text);
     final duration = int.tryParse(_durationController.text.trim());
     final quantity = num.tryParse(_totalQuantityController.text.trim());
-    if (doseError != null || _nameController.text.trim().isEmpty || duration == null || duration < 0 || quantity == null || !quantity.isFinite || quantity < 0 ||
-      [_selectedUnit, _selectedFrequency, _selectedMealTiming, _selectedRoute].contains('請確認')) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(doseError ?? '請確認名稱、單位、頻率、時機、途徑及數量。')));
+    if (doseError != null ||
+        _nameController.text.trim().isEmpty ||
+        duration == null ||
+        duration < 0 ||
+        quantity == null ||
+        !quantity.isFinite ||
+        quantity < 0 ||
+        [
+          _selectedUnit,
+          _selectedFrequency,
+          _selectedMealTiming,
+          _selectedRoute,
+        ].contains('請確認')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(doseError ?? '請確認名稱、單位、頻率、時機、途徑及數量。')),
+      );
       return;
     }
     final updatedMedicine = widget.medicine.copyWith(
@@ -877,7 +861,9 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
       startDate: _selectedStartDate,
     );
 
-    final source = _sourceController.text.trim().isEmpty ? null : _sourceController.text.trim();
+    final source = _sourceController.text.trim().isEmpty
+        ? null
+        : _sourceController.text.trim();
     widget.onSave(updatedMedicine, source);
     Navigator.pop(context);
   }
@@ -916,10 +902,7 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
               children: [
                 const Text(
                   '編輯藥品資訊',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 IconButton(
@@ -940,10 +923,7 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 藥品名稱
-                  _buildTextField(
-                    label: '藥品名稱',
-                    controller: _nameController,
-                  ),
+                  _buildTextField(label: '藥品名稱', controller: _nameController),
                   const SizedBox(height: 16),
 
                   // 劑量和單位
@@ -1031,13 +1011,15 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
                         firstDate: DateTime(2020),
                         lastDate: DateTime(2030),
                       );
-                      if (picked != null) setState(() => _selectedStartDate = picked);
+                      if (picked != null)
+                        setState(() => _selectedStartDate = picked);
                     },
                     child: AbsorbPointer(
                       child: _buildTextField(
                         label: '開始日期',
                         controller: TextEditingController(
-                          text: '${_selectedStartDate.year}/${_selectedStartDate.month.toString().padLeft(2,'0')}/${_selectedStartDate.day.toString().padLeft(2,'0')}',
+                          text:
+                              '${_selectedStartDate.year}/${_selectedStartDate.month.toString().padLeft(2, '0')}/${_selectedStartDate.day.toString().padLeft(2, '0')}',
                         ),
                       ),
                     ),
@@ -1146,10 +1128,7 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
                 ),
                 child: const Text(
                   '儲存修改',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -1227,10 +1206,7 @@ class _MedicineEditSheetState extends State<_MedicineEditSheet> {
               value: value,
               isExpanded: true,
               items: items.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Text(item),
-                );
+                return DropdownMenuItem(value: item, child: Text(item));
               }).toList(),
               onChanged: onChanged,
             ),

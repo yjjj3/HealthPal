@@ -1,4 +1,4 @@
-import 'medication_dose.dart';
+import '../utils/medication_regimen.dart';
 // lib/models/prescription_model.dart
 // 處方箋資料模型
 
@@ -391,7 +391,7 @@ class MealTimeSettings {
 
   /// 根據服用時機計算實際提醒時間
   List<DateTime> calculateReminderTimes({required String timing, required String frequency, DateTime? baseDate}) {
-    final count = MedicationDose.frequencyPerDay(frequency);
+    final count = regimenSlotCount(frequency);
     if (count == 0) return [];
     final now = baseDate ?? DateTime.now();
     final today = DateTime(now.year, now.month, now.day);

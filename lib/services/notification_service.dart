@@ -1,3 +1,5 @@
+import '../models/medication_model.dart';
+import 'medication_reminder_planner.dart';
 import '../utils/medication_schedule.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,7 +22,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('🔔 背景收到通知: ${message.notification?.title}');
 }
 
-class NotificationService {
+class NotificationService with WidgetsBindingObserver {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
@@ -37,6 +39,58 @@ class NotificationService {
   Completer<void>? _settingsReady;
   int _accountGeneration = 0;
   Future<void> _accountReady = Future.value();
+
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _medicineSubscription;
+  List<medicine>? _reminderMedications;
+  Timer? _reminderTimer;
+  final ValueNotifier<String> medicationReminderStatus = ValueNotifier('提醒排程尚未載入');
+  late final MedicationReminderScheduler _medicationScheduler = MedicationReminderScheduler(
+    pending: () async => (await _localNotifications.pendingNotificationRequests())
+        .map((r) => PendingReminder(r.id, r.payload)).toList(),
+    cancel: (id) => _localNotifications.cancel(id),
+    schedule: (id, request) => request.repeat == 0
+      ? scheduleMedicationReminder(id: id, medicineName: request.medication.name,
+          dosage: request.medication.dosage, scheduledTime: request.at,
+          medicationId: request.medication.medicine_id!, payload: request.payload)
+      : scheduleMissedDoseReminder(id: id - request.repeat, medicationName: request.medication.name,
+          dosage: request.medication.dosage, scheduledTime: request.at,
+          medicationId: request.medication.medicine_id!, reminderCount: request.repeat, payload: request.payload),
+  );
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _rebuildMedicationReminders();
+  }
+
+  Future<void> _rebuildMedicationReminders() async {
+    if (isWeb) { medicationReminderStatus.value = 'Web 不支援本機用藥排程'; return; }
+    final medications = _reminderMedications;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final generation = _accountGeneration;
+    if (medications == null || uid == null) return;
+    bool valid() => generation == _accountGeneration && uid == FirebaseAuth.instance.currentUser?.uid;
+    try {
+      final enabled = isNotificationEnabled('health');
+      final plan = await _medicationScheduler.replace(medications, now: DateTime.now(),
+        isCurrent: valid, enabled: enabled,
+        missedEnabled: _missedDoseSettings['missedDoseEnabled'] == true,
+        missedInterval: _missedDoseSettings['missedDoseInterval'] as int? ?? 30,
+        missedCount: _missedDoseSettings['missedDoseMaxReminders'] as int? ?? 2);
+      if (!valid() || plan == null) return;
+      final last = plan.lastScheduled;
+      final omittedAt = plan.firstOmitted;
+      final missing = omittedAt == null ? '' : '最早未排 ${omittedAt.month}/${omittedAt.day} ${omittedAt.hour}:${omittedAt.minute.toString().padLeft(2, '0')}；可減少漏吃提醒次數以增加涵蓋日期。';
+      final end = last == null ? '沒有待發提醒' : '最晚已排至 ${last.month}/${last.day} ${last.hour}:${last.minute.toString().padLeft(2, '0')}';
+      medicationReminderStatus.value = !enabled ? '健康提醒已關閉' :
+          '本機已排 ${plan.requests.length} 則，$end。' +
+          (plan.omitted > 0 ? '容量不足，${plan.omitted} 則尚未排入。$missing' : '') +
+          (plan.issues.isNotEmpty ? '部分療程未排程：${plan.issues.join('；')}。' : '') +
+          '最多預排30天；容量與其他通知共用，系統可能延後送達。請在已排期限前開啟 App 補排，關閉 App 後無法自動延長。';
+    } catch (error) {
+      if (valid()) medicationReminderStatus.value = '提醒排程未完成，請檢查通知權限並重新開啟 App；目前無法保證提醒完整。';
+      debugPrint('用藥排程未完成: ${error.runtimeType}');
+    }
+  }
 
   // 通知頻道 ID
   static const String _medicationChannelId = 'medication_reminders';
@@ -67,8 +121,15 @@ class NotificationService {
   Future<void> initialize() => _initialization.run(() async {
     if (isWeb) await _initializeForWeb();
     else await _initializeForMobile();
+    WidgetsBinding.instance.addObserver(this);
+    _reminderTimer ??= Timer.periodic(const Duration(hours: 1), (_) => _rebuildMedicationReminders());
     _authSubscription ??= FirebaseAuth.instance.authStateChanges().listen((user) {
       final generation = ++_accountGeneration;
+      _medicationScheduler.invalidate();
+      _medicineSubscription?.cancel();
+      _medicineSubscription = null;
+      _reminderMedications = null;
+      medicationReminderStatus.value = '提醒排程尚未載入';
       if (_settingsReady?.isCompleted == false) _settingsReady!.complete();
       _settingsSubscription?.cancel();
       _settingsSubscription = null;
@@ -83,6 +144,9 @@ class NotificationService {
 
   Future<void> _bindNotificationAccount(User? user, int generation) async {
     if (generation != _accountGeneration) return;
+    // Drain an in-flight native call before clearing a previous account.
+    await _medicationScheduler.idle;
+    if (generation != _accountGeneration) return;
     // Preserve the same account's scheduled reminders across app restarts.
     final prefs = await SharedPreferences.getInstance();
     final previousUid = prefs.getString('notification_account_uid');
@@ -95,15 +159,34 @@ class NotificationService {
     _settingsReady = settingsReady;
     _settingsSubscription = FirebaseFirestore.instance.collection('users').doc(user.uid)
       .collection('settings').doc('notifications').snapshots().listen((snapshot) {
-        if (generation == _accountGeneration) _applyNotificationSettings(snapshot.data());
+        if (generation == _accountGeneration) {
+          _applyNotificationSettings(snapshot.data());
+          _rebuildMedicationReminders();
+        }
         if (!settingsReady.isCompleted) settingsReady.complete();
       }, onError: (Object error) {
-        if (generation == _accountGeneration) _notificationSettings['all'] = false;
+        if (generation == _accountGeneration) { _notificationSettings['all'] = false; _rebuildMedicationReminders(); }
         if (!settingsReady.isCompleted) settingsReady.complete();
         debugPrint('通知設定監聽失敗: $error');
       }, onDone: () { if (!settingsReady.isCompleted) settingsReady.complete(); });
     await settingsReady.future;
     if (generation != _accountGeneration) return;
+    if (!isWeb) {
+      _medicineSubscription = FirebaseFirestore.instance.collection('users').doc(user.uid)
+          .collection('medicine').orderBy('name').snapshots().listen((snapshot) {
+        if (generation != _accountGeneration) return;
+        try {
+          _reminderMedications = snapshot.docs.map(medicine.fromFirestore).toList();
+          _rebuildMedicationReminders();
+        } catch (_) {
+          _reminderMedications = null;
+          _medicationScheduler.invalidate();
+          medicationReminderStatus.value = '藥品資料無法完整解析，舊提醒可能仍存在，請修正藥品資料。';
+        }
+      }, onError: (Object _) {
+        if (generation == _accountGeneration) medicationReminderStatus.value = '用藥同步失敗，可能仍使用舊排程，請重新開啟 App 同步。';
+      });
+    }
     await _getAndSaveFCMToken();
   }
 
@@ -543,6 +626,7 @@ class NotificationService {
     required String dosage,
     required DateTime scheduledTime,
     required String medicationId,
+    String? payload,
   }) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final generation = _accountGeneration;
@@ -591,10 +675,10 @@ class NotificationService {
       '該服用 $medicineName $dosage 了',
       tzScheduledTime,
       details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      payload: 'medication|$medicationId',
+      payload: payload ?? 'medication|$medicationId',
     );
 
     debugPrint('✅ 已排程用藥提醒: $medicineName 於 $scheduledTime');
@@ -610,6 +694,7 @@ class NotificationService {
     required DateTime scheduledTime,
     required String medicationId,
     int reminderCount = 1,
+    String? payload,
   }) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final generation = _accountGeneration;
@@ -655,7 +740,7 @@ class NotificationService {
 
     final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
-    // 使用 ID + 1000 的範圍來區分漏吃提醒
+    // 每個應服時段保留 50 個漏吃提醒 ID
     final notificationId = id + reminderCount;
 
     await _localNotifications.zonedSchedule(
@@ -664,10 +749,10 @@ class NotificationService {
       '$medicationName ($dosage) 尚未服用，請記得服藥',
       tzScheduledTime,
       details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      payload: 'missed_dose|$medicationId|$reminderCount',
+      payload: payload ?? 'missed_dose|$medicationId|$reminderCount',
     );
 
     debugPrint('✅ 已排程漏吃提醒 #$reminderCount: $medicationName, ID: $notificationId');
@@ -739,6 +824,7 @@ class NotificationService {
       matchDateTimeComponents: DateTimeComponents.time,
     );
 
+    _rebuildMedicationReminders(); // Reserve capacity for this non-medication request.
     debugPrint('✅ 已排程健康提醒: $title, 時間: $scheduledTime');
   }
 

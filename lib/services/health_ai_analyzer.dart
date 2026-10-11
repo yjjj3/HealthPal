@@ -1,3 +1,4 @@
+import 'medication_adherence.dart';
 import '../utils/plain_ai_text.dart';
 import '../repositories/health_context_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -39,7 +40,7 @@ class HealthAIAnalyzer {
 引用飲食紀錄筆數、總熱量、最近食物等，評估飲食習慣是否均衡，給出建議
 
 💊 用藥情況
-說明服藥依從率，給出建議
+依提供的應服時段與最終狀態說明用藥紀錄；資料不完整時不得推算依從率百分比
 
 🎯 行動建議
 根據上述數據（包含飲食），提出3點具體可執行的建議
@@ -233,8 +234,6 @@ class HealthAIAnalyzer {
     // 藥物與用藥紀錄
     final medications =
         userData['medications'] as List<Map<String, dynamic>>? ?? [];
-    final medicationLogs =
-        userData['medicationLogs'] as List<Map<String, dynamic>>? ?? [];
 
     if (medications.isNotEmpty) {
       buffer.writeln('【目前用藥】');
@@ -247,21 +246,7 @@ class HealthAIAnalyzer {
       buffer.writeln();
     }
 
-    if (medicationLogs.isNotEmpty) {
-      buffer.writeln('【近7天用藥紀錄】');
-      final takenCount =
-          medicationLogs.where((log) => log['is_taken'] == true).length;
-      final cancelledCount =
-          medicationLogs.where((log) => log['is_taken'] == false).length;
-      buffer.writeln('服用次數：$takenCount 次');
-      buffer.writeln('取消次數：$cancelledCount 次');
-      if (takenCount + cancelledCount > 0) {
-        final adherenceRate =
-            (takenCount / (takenCount + cancelledCount) * 100).round();
-        buffer.writeln('服藥依從率：$adherenceRate%');
-      }
-      buffer.writeln();
-    }
+    buffer.writeln(calculateMedicationAdherence(userData).summary);
 
     // 飲食紀錄
     final dietRecords =

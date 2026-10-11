@@ -1,3 +1,5 @@
+import 'medication_history.dart';
+import '../utils/medication_regimen.dart';
 import '../models/medication_dose.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,10 +10,13 @@ class FirestoreService {
   FirestoreService({
     FirebaseFirestore? firestore,
     String? Function()? currentUid,
+    DateTime Function()? now,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _now = now ?? DateTime.now,
        _uidProvider =
            currentUid ?? (() => FirebaseAuth.instance.currentUser?.uid);
   final FirebaseFirestore _firestore;
+  final DateTime Function() _now;
   final String? Function() _uidProvider;
 
   // --- 輔助函式：確保所有集合都在 users/{uid} 下 ---
@@ -79,7 +84,8 @@ class FirestoreService {
         timeSlotIndex >= medication.times_of_day_list.length)
       throw StateError('服藥時段不存在。');
     final taking =
-        medication.shouldResetStatus || !medication.times_status[timeSlotIndex];
+        calendarDay(_now()).isAfter(calendarDay(medication.lastUpdated)) ||
+        !medication.times_status[timeSlotIndex];
     final owner = _firestore.collection('users').doc(uid);
     final ref = owner.collection('medicine').doc(id);
     await _firestore.runTransaction((tx) async {
@@ -87,7 +93,9 @@ class FirestoreService {
       if (_currentUid != uid || !snapshot.exists) throw StateError('帳號或藥品已變更。');
       final current = medicine.fromFirestore(snapshot);
       final times = current.times_of_day_list;
-      if (times.map((t) => '${t.hour}:${t.minute}').toSet().length != times.length) throw StateError('提醒時段不可重複，請先編輯藥品。');
+      if (times.map((t) => '${t.hour}:${t.minute}').toSet().length !=
+          times.length)
+        throw StateError('提醒時段不可重複，請先編輯藥品。');
       if (timeSlotIndex >= times.length ||
           timeSlotIndex >= current.times_status.length ||
           times[timeSlotIndex].hour !=
@@ -96,7 +104,8 @@ class FirestoreService {
               medication.times_of_day_list[timeSlotIndex].minute) {
         throw StateError('服藥時段已變更，請重新載入。');
       }
-      final status = current.shouldResetStatus
+      final status =
+          calendarDay(_now()).isAfter(calendarDay(current.lastUpdated))
           ? List<bool>.filled(times.length, false)
           : List<bool>.from(current.times_status);
       if (status[timeSlotIndex] == taking) throw StateError('用藥狀態已更新，請重新載入。');
@@ -104,7 +113,10 @@ class FirestoreService {
       final dose = current.total_pills.toDouble();
       if (!stock.isFinite || stock < 0 || !dose.isFinite || dose <= 0)
         throw StateError('劑量或庫存無效。');
-      final now = DateTime.now();
+      final now = _now();
+      if (taking && !MedicationRegimen(current).includesDay(now)) {
+        throw StateError('今天不在此藥品的應服日期內。');
+      }
       final day = '${now.year}-${now.month}-${now.day}';
       final slot =
           '${times[timeSlotIndex].hour}:${times[timeSlotIndex].minute}';
@@ -134,17 +146,31 @@ class FirestoreService {
         receipts.remove(slot);
       }
       final remaining = taking ? stock - deducted : stock + deducted;
+      final sequence = (snapshot.data()?['intake_sequence'] as int? ?? 0) + 1;
       status[timeSlotIndex] = taking;
       tx.update(ref, {
         'times_status': status,
         'total_supply': remaining,
         'lastUpdated': Timestamp.fromDate(now),
         'intake_receipts': receipts,
+        'intake_sequence': sequence,
+        if (snapshot.data()?['regimen_history'] == null)
+          'regimen_history': [regimenVersion(current.toFirestore(), now)],
       });
       tx.set(owner.collection('medication_logs').doc(), {
         'medicine_id': id,
         'medicine_name': current.name,
         'intake_time': Timestamp.fromDate(now),
+        'operation_sequence': sequence,
+        'scheduled_at': Timestamp.fromDate(
+          DateTime(
+            now.year,
+            now.month,
+            now.day,
+            times[timeSlotIndex].hour,
+            times[timeSlotIndex].minute,
+          ),
+        ),
         'dosage_taken': loggedDose,
         'stock_change': taking ? -deducted : deducted,
         'dose_number': timeSlotIndex + 1,
@@ -162,6 +188,17 @@ class FirestoreService {
       });
     });
     return taking;
+  }
+
+  Future<String> addMedication(medicine med) async {
+    final uid = _currentUid;
+    if (uid == null) throw StateError('請先登入。');
+    final ref = await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('medicine')
+        .add(medicationCreationData(med, _now()));
+    return ref.id;
   }
 
   /// Merge only fields edited by this form; preserve live stock and intake receipts.
@@ -216,7 +253,8 @@ class FirestoreService {
           throw StateError('此欄位已在其他裝置修改，請重新載入。');
       }
       if (changes.containsKey('times_of_day_list')) {
-        final statuses = current.shouldResetStatus
+        final statuses =
+            calendarDay(_now()).isAfter(calendarDay(current.lastUpdated))
             ? List<bool>.filled(current.times_status.length, false)
             : current.times_status;
         final next = edited.times_of_day_list;
@@ -236,6 +274,13 @@ class FirestoreService {
           );
           return i >= 0 && i < statuses.length ? statuses[i] : false;
         }).toList();
+      }
+      if (regimenFields.any(changes.containsKey)) {
+        MedicationRegimen(edited);
+        patch['regimen_history'] = appendRegimenHistory(snapshot.data()!, {
+          ...raw,
+          ...changes,
+        }, _now());
       }
       if (patch.isNotEmpty) tx.update(ref, patch);
     });

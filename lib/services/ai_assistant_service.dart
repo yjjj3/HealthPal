@@ -1,3 +1,4 @@
+import 'medication_adherence.dart';
 import '../utils/plain_ai_text.dart';
 import '../repositories/health_context_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -43,6 +44,7 @@ class AIAssistantService {
 3. 如果涉及嚴重健康問題，務必建議用戶諮詢醫師
 4. 引用用戶的實際健康數據時要說出具體數字
 5. 不要使用 Markdown 格式（如 # * -）
+6. 服藥依從率只能引用提供的完成率；若資料不完整，不得從操作日誌比例推算百分比
 
 【用戶資料】
 ''');
@@ -145,17 +147,7 @@ class AIAssistantService {
       buffer.writeln();
     }
 
-    // 加入用藥依從率
-    final medicationLogs = userData['medicationLogs'] as List<Map<String, dynamic>>? ?? [];
-    if (medicationLogs.isNotEmpty) {
-      final takenCount = medicationLogs.where((log) => log['is_taken'] == true).length;
-      final total = medicationLogs.length;
-      if (total > 0) {
-        final adherenceRate = (takenCount / total * 100).round();
-        buffer.writeln('近 7 天服藥依從率：$adherenceRate%');
-        buffer.writeln();
-      }
-    }
+    buffer.writeln(calculateMedicationAdherence(userData).summary);
 
     // 加入飲食紀錄摘要
     final dietRecords = userData['dietRecords'] as List<Map<String, dynamic>>? ?? [];

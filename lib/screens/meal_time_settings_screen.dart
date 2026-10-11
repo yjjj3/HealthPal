@@ -2,8 +2,6 @@
 // 用餐時間設定頁面
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_dimensions.dart';
 import '../models/prescription_model.dart';
@@ -27,8 +25,6 @@ class MealTimeSettingsScreen extends StatefulWidget {
 class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
   final PrescriptionScanService _scanService = PrescriptionScanService();
   final NotificationService _notificationService = NotificationService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   late MealTimeSettings _settings;
   bool _isLoading = true;
@@ -115,7 +111,9 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
         _settings,
         sources: null,
       );
-      await _scanService.saveMedications(medications);
+      await _scanService.saveMedications(
+        medications.map((m) => m.copyWith(reminderEnabled: false)).toList(),
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -140,21 +138,21 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
       debugPrint('儲存失敗: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('儲存失敗: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('儲存失敗: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      setState(() {
-        _isSaving = false;
-      });
+      if (mounted)
+        setState(() {
+          _isSaving = false;
+        });
     }
   }
 
   Future<void> _saveSettingsOnly() async {
-    setState(() { _isSaving = true; });
+    setState(() {
+      _isSaving = true;
+    });
     try {
       await _scanService.saveMealTimeSettings(_settings);
       if (mounted) {
@@ -174,7 +172,10 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
         );
       }
     } finally {
-      setState(() { _isSaving = false; });
+      if (mounted)
+        setState(() {
+          _isSaving = false;
+        });
     }
   }
 
@@ -197,61 +198,22 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
       // 3. 儲存藥品到 Firestore
       await _scanService.saveMedications(medications);
 
-      // 4. 排程用藥提醒通知（失敗不影響儲存結果）
-      int scheduledCount = 0;
+      // Medication reminders are rebuilt by the account-level listener.
       try {
-        final user = _auth.currentUser;
-        if (user != null) {
-          final snapshot = await _firestore
-              .collection('users')
-              .doc(user.uid)
-              .collection('medicine')
-              .orderBy(FieldPath.documentId)
-              .limitToLast(medications.length)
-              .get();
-
-          for (int i = 0; i < snapshot.docs.length; i++) {
-            final doc = snapshot.docs[i];
-            final med = medications[i < medications.length ? i : 0];
-
-            for (int j = 0; j < med.times_of_day_list.length; j++) {
-              final scheduledTime = med.times_of_day_list[j];
-              final now = DateTime.now();
-
-              var reminderTime = DateTime(
-                now.year, now.month, now.day,
-                scheduledTime.hour, scheduledTime.minute,
-              );
-
-              if (reminderTime.isBefore(now)) {
-                reminderTime = reminderTime.add(const Duration(days: 1));
-              }
-
-              try {
-                await _notificationService.scheduleMedicationReminder(
-                  id: doc.id.hashCode + j,
-                  medicineName: med.name,
-                  dosage: med.dosage,
-                  scheduledTime: reminderTime,
-                  medicationId: doc.id,
-                );
-                scheduledCount++;
-              } catch (e) {
-                debugPrint('排程通知失敗 (${med.name}): $e');
-              }
-            }
-          }
-        }
-
         // 5. 回診提醒
         if (widget.hospitalInfo != null &&
             widget.hospitalInfo!['followUpDate'] != null) {
-          final followUpDateStr = widget.hospitalInfo!['followUpDate'] as String;
+          final followUpDateStr =
+              widget.hospitalInfo!['followUpDate'] as String;
           final followUpDate = DateTime.tryParse(followUpDateStr);
           if (followUpDate != null && followUpDate.isAfter(DateTime.now())) {
             final reminderDate = followUpDate.subtract(const Duration(days: 1));
             final reminderTime = DateTime(
-              reminderDate.year, reminderDate.month, reminderDate.day, 9, 0,
+              reminderDate.year,
+              reminderDate.month,
+              reminderDate.day,
+              9,
+              0,
             );
             await _notificationService.scheduleHealthReminder(
               id: 'followup_${followUpDate.millisecondsSinceEpoch}'.hashCode,
@@ -265,9 +227,7 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
       }
 
       if (mounted) {
-        final msg = scheduledCount > 0
-            ? '藥品已加入用藥清單，已建立 $scheduledCount 個提醒'
-            : '藥品已成功加入用藥清單！';
+        const msg = '藥品已成功加入用藥清單！';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -291,15 +251,18 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('儲存失敗: ${e.toString().replaceAll('Exception: ', '')}'),
+            content: Text(
+              '儲存失敗: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
       }
     } finally {
-      setState(() {
-        _isSaving = false;
-      });
+      if (mounted)
+        setState(() {
+          _isSaving = false;
+        });
     }
   }
 
@@ -542,11 +505,7 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(
-                    Icons.edit,
-                    size: 16,
-                    color: AppColors.primary,
-                  ),
+                  const Icon(Icons.edit, size: 16, color: AppColors.primary),
                 ],
               ),
             ),
@@ -777,8 +736,8 @@ class _MealTimeSettingsScreenState extends State<MealTimeSettingsScreen> {
           onPressed: _isSaving
               ? null
               : widget.medicines.isEmpty
-                  ? _saveSettingsOnly
-                  : _saveAndCreateReminders,
+              ? _saveSettingsOnly
+              : _saveAndCreateReminders,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,

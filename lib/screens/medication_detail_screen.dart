@@ -1,3 +1,4 @@
+import '../utils/medication_regimen.dart';
 import '../utils/medication_schedule.dart';
 import '../models/medication_dose.dart';
 import '../theme/app_colors.dart';
@@ -66,7 +67,7 @@ class _MedicationDetailScreenState extends State<MedicationDetailScreen> {
     
     final int targetCount;
     try {
-      targetCount = MedicationDose.frequencyPerDay(newFrequency);
+      targetCount = regimenSlotCount(newFrequency);
     } on FormatException {
       // Keep the existing schedule until an unsupported legacy regimen is confirmed.
       return;

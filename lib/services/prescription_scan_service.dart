@@ -1,3 +1,4 @@
+import 'medication_history.dart';
 // lib/services/prescription_scan_service.dart
 // 處方箋智慧辨識服務
 
@@ -21,13 +22,38 @@ import '../models/prescription_model.dart';
 class PrescriptionScanService {
   static final PrescriptionScanService _instance =
       PrescriptionScanService._internal();
-  factory PrescriptionScanService() => _instance;
-  PrescriptionScanService._internal();
-
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  final AIClient _client = AIConfig.client;
+  factory PrescriptionScanService({
+    FirebaseFirestore? firestore,
+    String? Function()? currentUid,
+    AIClient? client,
+    DateTime Function()? now,
+  }) {
+    if (firestore == null &&
+        currentUid == null &&
+        client == null &&
+        now == null)
+      return _instance;
+    return PrescriptionScanService._internal(
+      firestore: firestore,
+      currentUid: currentUid,
+      client: client,
+      now: now,
+    );
+  }
+  PrescriptionScanService._internal({
+    FirebaseFirestore? firestore,
+    String? Function()? currentUid,
+    AIClient? client,
+    DateTime Function()? now,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _uidProvider =
+           currentUid ?? (() => FirebaseAuth.instance.currentUser?.uid),
+       _client = client ?? AIConfig.client,
+       _now = now ?? DateTime.now;
+  final FirebaseFirestore _firestore;
+  final String? Function() _uidProvider;
+  final AIClient _client;
+  final DateTime Function() _now;
 
   // 台灣處方箋專用 Prompt
   static const String _prescriptionPrompt = '''
@@ -136,8 +162,9 @@ class PrescriptionScanService {
   // ============================================================
   // 使用 OpenAI Vision API 辨識處方箋圖片
   // ============================================================
-  Future<Map<String, dynamic>> recognizePrescriptionImage(File imageFile) async =>
-      recognizePrescriptionFromBytes(await imageFile.readAsBytes());
+  Future<Map<String, dynamic>> recognizePrescriptionImage(
+    File imageFile,
+  ) async => recognizePrescriptionFromBytes(await imageFile.readAsBytes());
 
   // ============================================================
   // 批次辨識多張處方箋圖片
@@ -151,9 +178,11 @@ class PrescriptionScanService {
       debugPrint('辨識第 ${i + 1}/${imageFiles.length} 張圖片...');
 
       final result = await recognizePrescriptionImage(imageFiles[i]);
-      allMedicines.addAll((result['medicines'] as List).map((m) =>
-        PrescriptionMedicine.fromJson(m as Map<String,dynamic>)));
-
+      allMedicines.addAll(
+        (result['medicines'] as List).map(
+          (m) => PrescriptionMedicine.fromJson(m as Map<String, dynamic>),
+        ),
+      );
     }
 
     return allMedicines;
@@ -162,11 +191,24 @@ class PrescriptionScanService {
   // ============================================================
   // 從 Uint8List 辨識圖片（用於相機預覽）
   // ============================================================
-  Future<Map<String, dynamic>> recognizePrescriptionFromBytes(Uint8List imageBytes) async {
+  Future<Map<String, dynamic>> recognizePrescriptionFromBytes(
+    Uint8List imageBytes,
+  ) async {
     final image = validatedImage(imageBytes, detail: 'high');
-    final content = await _client.complete(messages: [
-      {'role': 'user', 'content': [{'type':'text','text':_prescriptionPrompt}, image]},
-    ], maxTokens: 4096, temperature: 0.1, responseFormat: PrescriptionRecognition.responseFormat);
+    final content = await _client.complete(
+      messages: [
+        {
+          'role': 'user',
+          'content': [
+            {'type': 'text', 'text': _prescriptionPrompt},
+            image,
+          ],
+        },
+      ],
+      maxTokens: 4096,
+      temperature: 0.1,
+      responseFormat: PrescriptionRecognition.responseFormat,
+    );
     return PrescriptionRecognition.parse(content).data;
   }
 
@@ -174,15 +216,15 @@ class PrescriptionScanService {
   // 儲存處方箋到 Firestore
   // ============================================================
   Future<String> savePrescription(Prescription prescription) async {
-    final user = _auth.currentUser;
-    if (user == null) {
+    final uid = _uidProvider();
+    if (uid == null) {
       throw Exception('用戶未登入');
     }
 
     try {
       final docRef = await _firestore
           .collection('users')
-          .doc(user.uid)
+          .doc(uid)
           .collection('prescriptions')
           .add(prescription.toFirestore());
 
@@ -197,29 +239,35 @@ class PrescriptionScanService {
   // ============================================================
   // 將處方箋藥品轉換為用藥模型
   // ============================================================
-  Future<List<medicine>> convertToMedications(List<PrescriptionMedicine> prescriptionMedicines,
-    MealTimeSettings mealTimeSettings, {Map<int,String>? sources}) async =>
-      PrescriptionMedicationMapper.convert(prescriptionMedicines, mealTimeSettings, sources:sources);
+  Future<List<medicine>> convertToMedications(
+    List<PrescriptionMedicine> prescriptionMedicines,
+    MealTimeSettings mealTimeSettings, {
+    Map<int, String>? sources,
+  }) async => PrescriptionMedicationMapper.convert(
+    prescriptionMedicines,
+    mealTimeSettings,
+    sources: sources,
+  );
 
   // ============================================================
   // 儲存用藥到 Firestore
   // ============================================================
   Future<List<medicine>> saveMedications(List<medicine> medications) async {
-    final user = _auth.currentUser;
-    if (user == null) {
+    final uid = _uidProvider();
+    if (uid == null) {
       throw Exception('用戶未登入');
     }
 
     final batch = _firestore.batch();
     final medicineCollection = _firestore
         .collection('users')
-        .doc(user.uid)
+        .doc(uid)
         .collection('medicine');
 
     final saved = <medicine>[];
     for (final med in medications) {
       final docRef = medicineCollection.doc();
-      batch.set(docRef, med.toFirestore());
+      batch.set(docRef, medicationCreationData(med, _now()));
       saved.add(med.copyWith(medicine_id: docRef.id));
     }
 
