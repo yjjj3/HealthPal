@@ -47,21 +47,55 @@ void main() {
     WidgetTester tester,
     Future<void> Function() action,
   ) async {
-    await tester.runAsync(action);
+    var completed = false;
+    Object? failure;
+    await tester.runAsync(() async {
+      action().then(
+        (_) {
+          completed = true;
+        },
+        onError: (Object error) {
+          failure = error;
+          completed = true;
+        },
+      );
+    });
+    final deadline = Stopwatch()..start();
+    while (!completed && deadline.elapsed < const Duration(seconds: 10)) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 5)),
+      );
+      await tester.pump();
+    }
+    expect(
+      completed,
+      true,
+      reason: 'Awaited actual callback completion, not HTTP start',
+    );
+    if (failure != null) throw failure!;
     await tester.pumpAndSettle();
+  }
+
+  Future<void> press(
+    WidgetTester tester,
+    String label, {
+    bool stop = false,
+  }) async {
+    final callback = stop
+        ? tester
+              .widget<TextButton>(find.widgetWithText(TextButton, label))
+              .onPressed!
+        : tester
+              .widget<FilledButton>(find.widgetWithText(FilledButton, label))
+              .onPressed!;
+    // Await the real async callback, not a wall-clock sleep or transport start.
+    await (callback as Future<void> Function())();
   }
 
   Future<void> begin(WidgetTester tester) async {
     await tester.tap(find.byType(CheckboxListTile));
     await tester.pump();
-    await settleIO(tester, () async {
-      tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, '建立明確新 run（不送模型）'),
-          )
-          .onPressed!();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
+    await settleIO(tester, () => press(tester, '建立明確新 run（不送模型）'));
   }
 
   testWidgets(
@@ -77,23 +111,10 @@ void main() {
       expect(transport.calls, 0);
       await begin(tester);
       expect(transport.calls, 0);
-      await settleIO(tester, () async {
-        tester
-            .widget<FilledButton>(
-              find.widgetWithText(FilledButton, '送出下一筆 S01（會計費）'),
-            )
-            .onPressed!();
-        for (var i = 0; i < 100 && transport.calls == 0; i++) {
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-        }
-      });
+      await settleIO(tester, () => press(tester, '送出下一筆 S01（會計費）'));
       expect(transport.calls, 1);
       expect(find.text('送出下一筆 S02（會計費）'), findsOneWidget);
-      await settleIO(tester, () async {
-        tester
-            .widget<TextButton>(find.widgetWithText(TextButton, '停止'))
-            .onPressed!();
-      });
+      await settleIO(tester, () => press(tester, '停止', stop: true));
       expect(
         (tester.widget<FilledButton>(
           find.widgetWithText(FilledButton, '送出下一筆 S02（會計費）'),
@@ -101,6 +122,9 @@ void main() {
         null,
       );
       await tester.pumpWidget(const SizedBox());
+      await settleIO(tester, () async {
+        await journal.snapshot();
+      });
     },
   );
   testWidgets(
@@ -118,6 +142,9 @@ void main() {
       expect(find.text('送出下一筆 S02（會計費）'), findsOneWidget);
       expect(transport.calls, 0);
       await tester.pumpWidget(const SizedBox());
+      await settleIO(tester, () async {
+        await journal.snapshot();
+      });
     },
   );
   testWidgets(
@@ -127,28 +154,32 @@ void main() {
       transport.response = () => response.future;
       await tester.pumpWidget(panel());
       await begin(tester);
+      late Future<void> pendingSend;
       await settleIO(tester, () async {
-        tester
-            .widget<FilledButton>(
-              find.widgetWithText(FilledButton, '送出下一筆 S01（會計費）'),
-            )
-            .onPressed!();
+        pendingSend = press(tester, '送出下一筆 S01（會計費）');
         while (transport.calls == 0) {
           await Future<void>.delayed(Duration.zero);
         }
         session = null;
         boundary.value++;
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Wait the stop transaction without waiting for pending HTTP.
+        await journal.snapshot();
       });
       expect(find.text('已停止；預留不退款，禁止自動續跑'), findsOneWidget);
       await settleIO(tester, () async {
         response.complete(const BenchmarkResponse(200, '{}'));
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await pendingSend;
       });
-      final saved = await tester.runAsync(journal.snapshot);
-      expect(saved!['attempts'][0]['outcome'], 'stale');
+      late Map<String, dynamic> saved;
+      await settleIO(tester, () async {
+        saved = await journal.snapshot();
+      });
+      expect(saved['attempts'][0]['outcome'], 'stale');
       expect(transport.calls, 1);
       await tester.pumpWidget(const SizedBox());
+      await settleIO(tester, () async {
+        await journal.snapshot();
+      });
     },
   );
 }
