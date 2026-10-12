@@ -16,7 +16,7 @@ flutter --no-version-check test --no-pub test/prescription_eval_test.dart \
 npm --prefix functions test
 ```
 
-`golden.json`：case ID、情境、合成原文、逐欄真值、完整 unknownPaths、名稱容許 trim／大小寫正規化、逐案人工確認要求。`dataset.schema.json` 描述格式；`production-response-schema.json` 從 production Dart responseFormat 匯出，測試核對一致。`manifest.json` 記錄 SHA256；沒有處方圖片，沒有執行 OCR。driver 使用 PNG signature bytes 只驗證 image payload 契約，不能視為可供辨識的影像。未安裝新工具。
+`golden.json`：case ID、情境、合成原文、逐欄真值、完整 unknownPaths、名稱容許 trim／大小寫正規化、逐案人工確認要求。`dataset.schema.json` 描述格式；`production-response-schema.json` 從 production Dart responseFormat 匯出，測試核對一致。`manifest.json` 記錄 5 個 fixture SHA256，另列 2 個結果 SHA256；沒有處方圖片，沒有執行 OCR。driver 使用 PNG signature bytes 只驗證 image payload 契約，不能視為可供辨識的影像。未安裝新工具。
 
 `oracle.json` 與 `synthetic_errors.json` 分離保存 raw 字串。前者是人工真值對照，後者刻意加入錯誤；**兩者均非模型輸出**。CLI 結果含原始 JSON／schema／service 分類、逐欄報告、model conversion 與 mapper 是否接受。結果不具模型 accuracy 意義。driver 測試未指定 CLI 環境時跳過；評分與 production 流程的其他測試仍由既有 Flutter CI 自動執行，未新增 CI 依賴或步驟。
 
@@ -35,6 +35,26 @@ npm --prefix functions test
 
 [OpenAI 官方 Structured Outputs 文件](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=chat) 說明 required 與 additionalProperties=false；本輪只讀官方文件，未查價格。production requested schema 符合此要求，但 Dart parser 仍接受 nullable 鍵缺失並保留額外 keys；負面測試與報告揭露差異，不把 mock 綠燈當 AI 可靠性。
 
+## 離線精確性窄修（2026-10-12，基準 `988c886`，已複核）
+
+schema 診斷依 JSON Schema 的數值整數語義：`2.0` 接受 integer、`2.5` 拒絕；bool／非有限數不當 integer，Dart int 直接判定以保留大於 2^53 的整數精度。型別診斷不等於療程非負驗證；後者仍由 production parser 處理。配對仍優先 englishName，fallback name 時使用 name 的正規化白名單，不套用 englishName 規則。name-only 的單元回歸不是 golden 辨識覆蓋。
+
+production model 缺開始日仍使用系統時間，本輪不改 model。離線結果的 modelConversion **排除 operational startDate**，逐案列出 modelConversionExcludedTimeFields；golden 日期欄及 raw／正規化評分仍保留。本輪回歸比較兩次相同輸入的欄位摘要與非時間 model conversion，保證本次涵蓋範圍的評分語義穩定；不宣稱輸出 byte-identical。provenance 的 baseline／來源 hash 會隨版本改變，Flutter log 也含執行耗時；CLI 另保存評分器與 driver 來源 SHA256。
+
+golden 不增例，仍 16 case／18 藥品列。已知值覆蓋如下；0 表示 golden 只有 unknown 真值，**未驗證該欄已知內容辨識**。
+
+| 維度 | golden 已知值／總量 | 缺口 |
+| --- | --- | --- |
+| name／englishName | 17/18、18/18 | 全為 SYNTH 識別；無中文-only／name-only，English-only 1 列 |
+| brandName／clinicalUse／storageMethod | 各 0/18 | 已知品牌、用途、儲存文字未覆蓋 |
+| hospitalName／doctorName／departmentName | 各 0/16 | 已知院所、醫師、科別未覆蓋 |
+| prescriptionDate／followUpDate | 各 1/16 | 只有單一合法日期組；另有 invalid-date 負面測試 |
+| frequency／timing／route | 各 16/18 | 只有每天1次／飯後／測試途徑；無隔日、每週、PRN、多次／小時與真途徑辨識覆蓋 |
+
+既有 medication 排程測試支持排程程式行為，不能填補上述 AI 辨識 coverage。兩組 oracle／刻意錯誤 raw 與正規化計分維持原數字；所有結果仍非模型輸出。
+
+窄修最終本機驗證：Flutter **272 全套／93 專項通過**，另 1 個 CLI driver 無輸入時跳過、兩組 CLI 已另行執行；分析 **0 error／10 warning／348 info**（exit 1、無新增）。兩組 oracle／刻意錯誤整張匹配維持 raw 16/16 與 1/16，正規化 15/16 與 1/16；350 欄位分母不變。只改離線 tool／test／docs／結果，未重跑 backend、rules 或 iOS；前輪結果為歷史證據。本輪未裝機／部署／呼叫模型；GitHub CI 以對應提交的 Actions 紀錄核對。
+
 ## 已確認邊界
 
 1. 掃描頁原本 `containsKey('error')` 把 schema-complete `error:null` 成功結果跳過。實際畫面＋production service mock 回歸先失敗（確認頁無藥），改成非 null 才跳過；非 null 錯誤不得增加辨識藥品，仍需人工確認。
@@ -46,7 +66,7 @@ npm --prefix functions test
 
 本輪基準 `af611d8`，日期 2026-10-12；原始結果見 [oracle](../test/fixtures/prescription_eval/results/oracle.json) 與 [刻意錯誤](../test/fixtures/prescription_eval/results/synthetic_errors.json)。驗證數字以此文件收尾快照為準。
 
-最終本機快照：Flutter 全套 **269 項通過**（原 229 項保留、新增 40 項；另 1 項 CLI driver 無輸入時跳過，已由兩次實際 CLI 另行通過）、相關專項 **90 項通過**；backend **8 項**、localhost rules **18 項**通過，均 exit 0。分析 **0 error／10 warning／348 info**，exit 1，無新增診斷。iOS `flutter --no-version-check build ios --debug --no-codesign --no-pub` exit 0（199.8 秒）；App／Widget arm64、minimum 16、未簽署。既有 MLKit arm64 simulator 警示保留；這是 device compile，非 simulator／真機功能驗證。
+第一階段初版（`af611d8` 基準）的本機快照：Flutter 全套 **269 項通過**（原 229 項保留、新增 40 項；另 1 項 CLI driver 無輸入時跳過，已由兩次實際 CLI 另行通過）、相關專項 **90 項通過**；backend **8 項**、localhost rules **18 項**通過，均 exit 0。分析 **0 error／10 warning／348 info**，exit 1，無新增診斷。iOS `flutter --no-version-check build ios --debug --no-codesign --no-pub` exit 0（199.8 秒）；App／Widget arm64、minimum 16、未簽署。既有 MLKit arm64 simulator 警示保留；這是 device compile，非 simulator／真機功能驗證。
 
 | 合成輸出 | raw JSON／16 | schema／16 | service／16 | raw 整張精確／16 | 正規化整張精確／16 |
 | --- | --- | --- | --- | --- | --- |
@@ -68,8 +88,8 @@ npm --prefix functions test
 
 ## 第二階段（待費用與操作核准，不執行）
 
-建議固定這 16 例各 1 次，加選定 4 例重跑，共 20 次；先補可讀合成影像與 manifest，再用授權的真模型測試，另保留未參與 prompt 調整的樣本，不能僅用這個小集合宣稱泛化。現行程式仍為 gpt-4o alias；若需 pin snapshot，須先審閱 gateway 允許名單變更，不能假稱已固定版本。
+建議固定這 16 例各 1 次，加選定 4 例重跑，共 20 次 logical calls（邏輯請求）；先補可讀合成影像與 manifest，再用授權的真模型測試，另保留未參與 prompt 調整的樣本，不能僅用這個小集合宣稱泛化。現行程式仍為 gpt-4o alias；若需 pin snapshot，須先審閱 gateway 允許名單變更，不能假稱已固定版本。
 
-成本核准前記錄每張尺寸／detail、文字 input tokens、影像計費估算、實際 usage 的 input/output/total tokens 與 resolved model；現有 gateway 缺 usage，因此需經批准的觀測方案，不能憑 choices 推算實際 token。保守 output 上界：20 × 4096，AIClient 若每次發生一次明確 429 重試則最多 40 次嘗試、40 × 4096；應另計 image/input、服務費及匯率／稅。實際成本依當日官方價格與 token/影像規則核對；本輪未查價，不填美元。
+成本核准前記錄每張尺寸／detail、文字 input tokens、影像計費估算、實際 usage 的 input/output/total tokens 與 resolved model；現有 gateway 缺 usage，因此需經批准的觀測方案，不能憑 choices 推算實際 token。計畫輸出預算以每個 logical call 最多 4096 tokens 準備；20 logical calls 若各發生一次 explicit 429 retry，最多為 40 HTTP attempts。這是嘗試數規劃，缺 usage／resolved model 不可當嚴格實際計價或已批准執行；應另計 image/input、服務費及匯率／稅。實際成本依當日官方價格與 token/影像規則核對；本輪未查價，不填美元。
 
 提案總費用上限 **NT$100（待使用者明確核准）**，涵蓋 AI 與任何 gateway 額外用量；先預估最壞上界低於核准額，否則不執行／減樣本。Blaze 或先前月預算不代表本階段授權；不能以 budget alert 當硬性停止。免費離線第一階段未產生模型／正式雲端用量。

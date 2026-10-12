@@ -9,5 +9,9 @@
     "oracle.json": "ba8d0963b65584d595b9dbe7342bb183b78ec0519b0168984706e32e2e2602f3",
     "production-response-schema.json": "1feaeff6378d375d3d8e4c6cf14377d606b287e946c35c7076d5637b91897607",
     "synthetic_errors.json": "d971cf1b66c03f2e65c84ed61fa67fb3f62bca32d6b7a3d4f4c2a7f64bd31638"
+  },
+  "resultsSha256": {
+    "results/oracle.json": "fb4a2b3229aa7727236c7b7e211b76cb8b7ef66989cc948f60972cb677b56aaa",
+    "results/synthetic_errors.json": "b38c85cceee35fa8e2dec9e92e1e660f1205d76933569ae6885c4448ac85ba3b"
   }
 }

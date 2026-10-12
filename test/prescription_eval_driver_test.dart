@@ -83,7 +83,10 @@ Future<Map<String, dynamic>> evaluateOffline(
               (m) => PrescriptionMedicine.fromJson(m as Map<String, dynamic>),
             )
             .toList();
-        converted = models.map((m) => m.toJson()).toList();
+        // Production conversion uses DateTime.now when no start date exists.
+        // Keep that behavior exercised, but exclude operational time from the
+        // evaluation artifact; it is neither OCR truth nor an accuracy field.
+        converted = models.map((m) => m.toJson()..remove('startDate')).toList();
         try {
           PrescriptionMedicationMapper.convert(models, MealTimeSettings());
         } catch (e) {
@@ -122,6 +125,7 @@ Future<Map<String, dynamic>> evaluateOffline(
           issues.isEmpty &&
           normalized != null,
       'modelConversion': converted,
+      'modelConversionExcludedTimeFields': ['startDate'],
       'mapperAccepted': normalized != null && mappingFailure == null,
       'mapperFailure': mappingFailure,
       'humanConfirmationRequired': c['humanConfirmation']['required'],

@@ -13,6 +13,75 @@ Map<String, dynamic> load(String name) =>
 Map<String, dynamic> clone(Map<String, dynamic> v) =>
     jsonDecode(jsonEncode(v)) as Map<String, dynamic>;
 void main() {
+  test('JSON Schema integer accepts mathematical integers only', () {
+    for (final value in [2, 2.0, 0.0, -2.0, 9007199254740993]) {
+      expect(schemaIssues(value, {'type': 'integer'}), isEmpty);
+    }
+    for (final value in [
+      2.5,
+      true,
+      false,
+      '2',
+      null,
+      double.infinity,
+      double.nan,
+    ]) {
+      expect(schemaIssues(value, {'type': 'integer'}), isNotEmpty);
+    }
+    expect(schemaIssues(2.0, {'type': 'number'}), isEmpty);
+  });
+  test('name-only matching uses name rules and retains English priority', () {
+    final c = validateGolden(load('golden')).first;
+    c['normalization'] = {
+      'name': ['trim', 'casefold'],
+      'englishName': [],
+    };
+    c['truth']['medicines'][0]['englishName'] = null;
+    final raw = clone(c['truth']);
+    raw['medicines'][0]['name'] = '  synth-01  ';
+    expect(scoreFields(c, raw)['exactFields'], true);
+    raw['medicines'].add(clone(raw['medicines'][0]));
+    expect(scoreFields(c, raw)['extraRows'], 1);
+    raw['medicines'] = [];
+    expect(scoreFields(c, raw)['missingRows'], 1);
+    expect(
+      identity({
+        'name': ' normalize ',
+        'englishName': ' EN ',
+      }, c['normalization']),
+      ' EN ',
+    );
+    c['normalization'] = {
+      'name': [],
+      'englishName': ['trim', 'casefold'],
+    };
+    expect(
+      identity({
+        'name': ' Keep Case ',
+        'englishName': null,
+      }, c['normalization']),
+      ' Keep Case ',
+    );
+  });
+  test(
+    'conversion time excluded; unchanged evaluation semantics stable',
+    () async {
+      final first = await evaluateOffline(load('golden'), load('oracle'));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      final second = await evaluateOffline(load('golden'), load('oracle'));
+      expect(second['fieldSummary'], first['fieldSummary']);
+      for (var i = 0; i < 16; i++) {
+        expect(
+          second['reports'][i]['modelConversion'],
+          first['reports'][i]['modelConversion'],
+        );
+        for (final row in first['reports'][i]['modelConversion']) {
+          expect(row.containsKey('startDate'), false);
+        }
+      }
+    },
+  );
+
   test('checked-in schema equals production requested response schema', () {
     final schema = jsonDecode(
       File(

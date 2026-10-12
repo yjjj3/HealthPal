@@ -29,9 +29,12 @@ List<String> schemaIssues(
       ? 'string'
       : value is bool
       ? 'boolean'
-      : value is int
+      : value is int ||
+            (value is double &&
+                value.isFinite &&
+                value == value.truncateToDouble())
       ? 'integer'
-      : value is num
+      : value is num && value.isFinite
       ? 'number'
       : 'invalid';
   if (!types.contains(type) &&
@@ -197,14 +200,13 @@ String classification(
 }
 
 String identity(Map row, Map<String, dynamic> rules) {
-  final value =
+  final key =
       row['englishName'] is String &&
           (row['englishName'] as String).trim().isNotEmpty
-      ? row['englishName']
-      : row['name'];
-  return value is String
-      ? normalize(value, 'englishName', rules).toString()
-      : '';
+      ? 'englishName'
+      : 'name';
+  final value = row[key];
+  return value is String ? normalize(value, key, rules).toString() : '';
 }
 
 Map<String, dynamic> scoreFields(Map<String, dynamic> c, dynamic prediction) {

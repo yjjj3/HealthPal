@@ -186,3 +186,7 @@ HealthPal 是以 iOS 為目標的 Flutter／Firebase 健康管理專案，整合
 原始結果、錯誤分類、代碼／prompt 契約來源與既有帳號／庫存／同步證據映射見 [AI 離線評估](AI_OFFLINE_EVALUATION.md)；[90 秒故事板](DEMO_STORYBOARD.md) 只交付規劃，未拍片。第二階段樣本、tokens／影像估算與總費用上限待另行核准；本輪未查價格、不編美元。
 
 **本輪驗證快照**：Flutter 269 全套／90 專項通過（另 1 項 CLI driver 無輸入跳過，已經兩次離線 CLI 執行）；backend 8、localhost rules 18 通過；分析 0 error／10 warning／348 info，exit 1、無新增。iOS arm64 device no-codesign／no-pub exit 0，App／Widget minimum 16、未簽署，既有 MLKit simulator 警示保留。oracle raw 整張 16/16、正規化 15/16；刻意錯誤 1/16。這些比例只校驗評分器，不是模型 accuracy；本輪未部署／裝機；GitHub CI 以對應提交的 Actions 紀錄核對。
+
+**離線精確性補充（`988c886` 後，已複核）**：僅修工具／測試，數值整數型別含大整數、name fallback 白名單及轉換時間欄分離先有失敗回歸。相同輸入的評分摘要／非時間 conversion 穩定，非 byte-identical 保證；production 不變。16 例不增加，以 coverage 表明列已知內容與 name-only／多樣 regimen 缺口，不以 parser 綠燈補足模型證據。
+
+窄修最終本機驗證：Flutter **272 全套／93 專項通過**，另 1 個 CLI driver 無輸入時跳過、兩組 CLI 已另行執行；分析 **0 error／10 warning／348 info**（exit 1、無新增）。兩組 oracle／刻意錯誤整張匹配維持 raw 16/16 與 1/16，正規化 15/16 與 1/16；350 欄位分母不變。只改離線 tool／test／docs／結果，未重跑 backend、rules 或 iOS；前輪結果為歷史證據。本輪未裝機／部署／呼叫模型；GitHub CI 以對應提交的 Actions 紀錄核對。

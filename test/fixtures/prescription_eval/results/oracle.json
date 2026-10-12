@@ -934,7 +934,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.676261",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -944,6 +943,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": true,
       "mapperFailure": null,
@@ -1358,7 +1360,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.687187",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -1382,7 +1383,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.687192",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -1392,6 +1392,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": true,
       "mapperFailure": null,
@@ -1656,7 +1659,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.690070",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -1666,6 +1668,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": true,
       "mapperFailure": null,
@@ -1930,7 +1935,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.692392",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -1940,6 +1944,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": false,
       "mapperFailure": "FormatException",
@@ -2204,7 +2211,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.694641",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -2214,6 +2220,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": false,
       "mapperFailure": "FormatException",
@@ -2478,7 +2487,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.696643",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -2488,6 +2496,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": false,
       "mapperFailure": "FormatException",
@@ -2752,7 +2763,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.698858",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -2762,6 +2772,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": false,
       "mapperFailure": "FormatException",
@@ -3026,7 +3039,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "",
-          "startDate": "2026-10-12T13:56:25.701374",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -3036,6 +3048,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": false,
       "mapperFailure": "FormatException",
@@ -3300,7 +3315,6 @@
           "durationDays": 0,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.703240",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -3310,6 +3324,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": true,
       "mapperFailure": null,
@@ -3574,7 +3591,6 @@
           "durationDays": 2,
           "totalQuantity": 0,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.705076",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -3584,6 +3600,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": true,
       "mapperFailure": null,
@@ -3848,7 +3867,6 @@
           "durationDays": 0,
           "totalQuantity": 0,
           "route": "",
-          "startDate": "2026-10-12T13:56:25.707574",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": null,
@@ -3858,6 +3876,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": false,
       "mapperFailure": "FormatException",
@@ -4122,7 +4143,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.710878",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "SYNTH警語：不得醫療使用；保留全部標點！",
@@ -4132,6 +4152,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": true,
       "mapperFailure": null,
@@ -4396,7 +4419,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.712841",
           "clinicalUse": null,
           "sideEffects": "合成測試Ａ；α／β。",
           "precautions": "非真實處方\n不得醫療使用",
@@ -4406,6 +4428,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": true,
       "mapperFailure": null,
@@ -4670,7 +4695,6 @@
           "durationDays": 0,
           "totalQuantity": 0,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.714767",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -4680,6 +4704,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": true,
       "mapperFailure": null,
@@ -4944,7 +4971,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.716682",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -4954,6 +4980,9 @@
           "imageUrl": null,
           "confidence": 0.1
         }
+      ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
       ],
       "mapperAccepted": true,
       "mapperFailure": null,
@@ -5368,7 +5397,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.718454",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -5392,7 +5420,6 @@
           "durationDays": 2,
           "totalQuantity": 2,
           "route": "測試途徑",
-          "startDate": "2026-10-12T13:56:25.718456",
           "clinicalUse": null,
           "sideEffects": null,
           "precautions": "僅合成測試；不得醫療使用。",
@@ -5403,13 +5430,16 @@
           "confidence": 0.1
         }
       ],
+      "modelConversionExcludedTimeFields": [
+        "startDate"
+      ],
       "mapperAccepted": true,
       "mapperFailure": null,
       "humanConfirmationRequired": true
     }
   ],
   "provenance": {
-    "baseline": "af611d8f3cf8bee28fc8f150424633d3a96d84dd",
+    "baseline": "988c8863c003544e4b6e87295d9495338eea4bc1",
     "command": [
       "flutter",
       "--no-version-check",
@@ -5426,7 +5456,10 @@
       "lib/services/prescription_scan_service.dart": "566b4c9f6a119072c6a5db007f36a04a71d28fe27fa5df9e9e54267ad8cd0d63",
       "lib/models/ai/prescription_recognition.dart": "c2b97f721ed125a6baf0a423fc17692b5ad987a6b04692b5f0818e5500b68795",
       "lib/services/ai/ai_client.dart": "2002dcab4029f0d289185fd947203fa3dac0c434ecfca4eb1b232f056450e572",
-      "functions/gateway.js": "2495a98f3b32e8892454172a90df55d29ce2384a6e6a6a0228cbf51fa6855d0a"
+      "functions/gateway.js": "2495a98f3b32e8892454172a90df55d29ce2384a6e6a6a0228cbf51fa6855d0a",
+      "tool/prescription_eval/evaluator.dart": "140a12a36d6b42ef269d12faf6b3ccfbfe7470b27e4f812add66b57b506547c2",
+      "test/prescription_eval_driver_test.dart": "172073edea796ba16222f5978614a2c04f733caedfc83ead91541cde6d205107",
+      "tool/evaluate_prescriptions.py": "f6482f05880c39dffc1790d83bb9631a6c01cc1874423cbd71fd19617bfbb27a"
     }
   }
 }

@@ -108,3 +108,7 @@ firebase deploy --only functions:healthpal-ai --project YOUR_FIREBASE_PROJECT
 以 `af611d8` 為基準，新增 16 例純合成 golden 與分離的 oracle／刻意錯誤 raw outputs。離線 CLI 經實際 AIClient／scan service／Dart parser／model／mapper，以逐欄 known／unknown 分母和整張匹配分開報告。已修掃描頁將 `error:null` 誤判失敗的分支；保留人工確認。schema／parser 寬鬆差異、英文名補值、unknown→0 及自報 confidence 未校準均揭露，未改既有資料。結果、命令、第二階段費用待核准方案見 [AI 離線評估](AI_OFFLINE_EVALUATION.md)；[Demo](DEMO_STORYBOARD.md) 尚未拍攝。這不代表模型 accuracy、live OCR、臨床效用或登入後真機通過。
 
 本輪最終本機快照：Flutter 269 項（另 1 個 CLI driver 無輸入跳過，兩次 CLI 已通過）、相關專項 90 項、backend 8 項、localhost rules 18 項均通過；分析 0 error／10 warning／348 info（exit 1，無新增）。arm64 device debug no-codesign／no-pub exit 0，App／Widget minimum 16、未簽署；既有 MLKit simulator 警示保留。本輪未裝機，外層另已觀察 `af611d8` 覆蓋安裝／啟動停登入頁，登入後／Face ID／HealthKit 尚未驗證。
+
+離線精確性窄修（2026-10-12，`988c886` 基準，已複核）：schema integer 接受數值整數 double，保留 Dart 大整數直接判定；name fallback 使用 name 規則。結果排除 model conversion 的 operational startDate，原 production model 不改；只驗證評分摘要與非時間轉換穩定，不保證 byte-identical。golden 未擴增，已知品牌／用途／儲存、院所／醫師／科別、name-only 及多樣頻率 coverage 缺口列於 [評估文件](AI_OFFLINE_EVALUATION.md)。
+
+窄修最終本機驗證：Flutter **272 全套／93 專項通過**，另 1 個 CLI driver 無輸入時跳過、兩組 CLI 已另行執行；分析 **0 error／10 warning／348 info**（exit 1、無新增）。兩組 oracle／刻意錯誤整張匹配維持 raw 16/16 與 1/16，正規化 15/16 與 1/16；350 欄位分母不變。只改離線 tool／test／docs／結果，未重跑 backend、rules 或 iOS；前輪結果為歷史證據。本輪未裝機／部署／呼叫模型；GitHub CI 以對應提交的 Actions 紀錄核對。
