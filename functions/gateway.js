@@ -31,6 +31,21 @@ function validatePayload(body) {
   }
   return body;
 }
+// Additive, bounded projection of provider metering only. No headers, IDs,
+// request body, credential fields or arbitrary provider metadata are returned.
+function metering(result) {
+  const u = result?.usage;
+  const valid = (n) => Number.isSafeInteger(n) && n >= 0;
+  const usage = u && valid(u.prompt_tokens) && valid(u.completion_tokens) &&
+    valid(u.total_tokens) && u.prompt_tokens + u.completion_tokens === u.total_tokens
+    ? {prompt_tokens: u.prompt_tokens, completion_tokens: u.completion_tokens, total_tokens: u.total_tokens}
+    : null;
+  const model = typeof result?.model === 'string' && /^gpt-4o-\d{4}-\d{2}-\d{2}$/.test(result.model)
+    ? result.model : null; // A returned alias alone is not a resolved snapshot.
+  const finish = result?.choices?.[0]?.finish_reason;
+  return {usage, resolved_model: model,
+    finish_reason: ['stop','length','tool_calls','content_filter','function_call'].includes(finish) ? finish : null};
+}
 function createHandler({verifyToken, consumeQuota, apiKey, fetchImpl = fetch}) {
   return async (req, res) => {
     res.set('Cache-Control', 'no-store');
@@ -62,7 +77,7 @@ function createHandler({verifyToken, consumeQuota, apiKey, fetchImpl = fetch}) {
       }
       const result = await upstream.json();
       // Return the response contract, never headers, credentials or full request logs.
-      return res.status(200).json({choices: result.choices});
+      return res.status(200).json({choices: result.choices, ...metering(result)});
     } catch (_) { return res.status(503).json({error: {code: 'upstream_unavailable'}}); }
   };
 }

@@ -1,0 +1,19 @@
+{
+  "perAttemptUsd": "0.36096",
+  "maxAttempts": 20,
+  "apiMaxUsd": "7.21920",
+  "apiEnvelopeTwd": "346.521600",
+  "cloudReserveTwd": "200",
+  "safetyTwd": "300",
+  "totalEnvelopeTwd": "846.521600",
+  "unallocatedTwd": "153.478400",
+  "conditions": [
+    "fixed gpt-4o standard tariff/context unchanged",
+    "max_tokens<=4096; image/input counted within context",
+    "actual FX and all fee/tax multipliers <= reserve thresholds",
+    "deployment/storage/cloud within NT200, finite horizon",
+    "no extra/background/implicit retries; app session not wired"
+  ],
+  "liveReady": false,
+  "actualCostTwd": null
+}

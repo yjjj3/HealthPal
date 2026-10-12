@@ -196,3 +196,7 @@ HealthPal 是以 iOS 為目標的 Flutter／Firebase 健康管理專案，整合
 2026-10-12，`f340275` 基準。沿原16例建立分離image benchmark，醒目合成／不得醫療使用標誌；逐欄可見性與契約補值分開，English-only正常補名不當AI錯誤。16圖逐張像素QA、同字體/Pillow本機重渲染hash全吻合；S11為幾何遮蔽，沒有真blur/OCR。乾跑工具沒有network/credential入口，以持久原子預留、20 total attempts、虛擬clock、停後不續跑及缺usage=null做回歸。token未實測、費用未批准、無模型/正式服務用量；[素材、命令及未完成清單](AI_DRY_RUN_PREPARATION.md)。
 
 本輪本機驗證：Python stdlib **14 項通過**、Flutter **272 項通過**（另1個離線評估driver無輸入跳過）、backend **8 項通過**，exit 0；分析 **0 error／10 warning／348 info**（exit 1，無新增）。dry fixture run 20 attempts／20 logical sample instances，虛擬限速與條件預留可核對；16圖重渲染hash全吻合。CI新增stdlib unittest命令，結果以對應提交的Actions紀錄核對；無production／scorer變更，未重跑iOS或正式服務。
+
+healthAI 計量窄修（2026-10-12，`34823cd` 基準，已複核）：choices向後相容，新增有界usage／resolved_model／finish_reason。已取得原revision／source generation、下載指定archive僅比較必要4檔與baseline完全相同；回退、NT1000 context成本envelope與App-session未接線blocker見 [窄修紀錄](HEALTHAI_METERING_REVIEW.md)。本輪未部署／模型live，費用批准不代表已驗證所有費用前提。
+
+本機驗證：backend 11／Python context與dry-run 18／Flutter全套272項通過（另1個離線driver無輸入跳過），exit 0；分析0 error／10 warning／348 info（exit 1，無新增）。未做iOS、App登入、deployment或模型live。

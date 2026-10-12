@@ -1,0 +1,59 @@
+{
+  "baseline": "34823cdce3688ea1537ec410da679a00f9ff7e62",
+  "date": "2026-10-12",
+  "deployedByThisTask": false,
+  "deploymentBefore": {
+    "function": "healthAI",
+    "region": "asia-east1",
+    "revision": "healthai-00001-juk",
+    "trafficPercent": 100,
+    "updateTime": "2026-10-10T16:51:57.666847278Z",
+    "sourceGeneration": "1791651025322002",
+    "runtime": "nodejs22",
+    "cpu": "1",
+    "memory": "256Mi",
+    "timeoutSeconds": 60,
+    "maxInstances": 2,
+    "concurrency": 10,
+    "startupCpuBoost": "true",
+    "buildTimeout": "1800s",
+    "buildMachineTypeExplicit": null,
+    "buildMachineInterpretation": "omitted; documented default e2-standard-2, recheck future build"
+  },
+  "archiveSha256": "aafb95b26887221dda0a26f7d9820de5632f4cd0c00da34374c6657245648c70",
+  "necessarySourceComparison": {
+    "index.js": {
+      "cloudSha256": "7dd11c9293e33cc57f4860d46843614a156d8218d3ef886d1d0a6d947d48b629",
+      "baselineSha256": "7dd11c9293e33cc57f4860d46843614a156d8218d3ef886d1d0a6d947d48b629",
+      "workingSha256": "7dd11c9293e33cc57f4860d46843614a156d8218d3ef886d1d0a6d947d48b629",
+      "cloudEqualsBaseline": true,
+      "cloudEqualsWorking": true
+    },
+    "gateway.js": {
+      "cloudSha256": "2495a98f3b32e8892454172a90df55d29ce2384a6e6a6a0228cbf51fa6855d0a",
+      "baselineSha256": "2495a98f3b32e8892454172a90df55d29ce2384a6e6a6a0228cbf51fa6855d0a",
+      "workingSha256": "2c12a4bf1263adf91b4335477ea668f30f55afa1ab4f84a84161dc1d3d1ccff4",
+      "cloudEqualsBaseline": true,
+      "cloudEqualsWorking": false
+    },
+    "package.json": {
+      "cloudSha256": "ed2827cb1ebe2bc6bed4d8ac2a91f8d88d839de643bf0d9a55af35726a53d4f3",
+      "baselineSha256": "ed2827cb1ebe2bc6bed4d8ac2a91f8d88d839de643bf0d9a55af35726a53d4f3",
+      "workingSha256": "ed2827cb1ebe2bc6bed4d8ac2a91f8d88d839de643bf0d9a55af35726a53d4f3",
+      "cloudEqualsBaseline": true,
+      "cloudEqualsWorking": true
+    },
+    "package-lock.json": {
+      "cloudSha256": "6721ce655c071a5d7bbd0f11131b539f4bbab56dc1d334bdd65c77c0ce02f5ce",
+      "baselineSha256": "6721ce655c071a5d7bbd0f11131b539f4bbab56dc1d334bdd65c77c0ce02f5ce",
+      "workingSha256": "6721ce655c071a5d7bbd0f11131b539f4bbab56dc1d334bdd65c77c0ce02f5ce",
+      "cloudEqualsBaseline": true,
+      "cloudEqualsWorking": true
+    }
+  },
+  "limitations": [
+    "No environment/secret files opened",
+    "Only four necessary runtime/dependency files compared, not archive-wide source equivalence",
+    "Old revision/source generation retained for rollback; write permission not exercised"
+  ]
+}

@@ -67,3 +67,30 @@ test('offline prescription schema request matches gateway envelope, not content 
   assert.equal(res.code, 200);
   assert.equal(res.body.choices[0].message.content, raw);
 });
+
+test('additive metering preserves choices and only safe usage/snapshot/finish fields', async () => {
+  const choices = [{finish_reason: 'stop', message: {content: 'synthetic raw'}}];
+  const run = handler({fetchImpl: async () => ({ok:true,json:async()=>({choices,
+    model:'gpt-4o-2024-08-06', usage:{prompt_tokens:11,completion_tokens:7,total_tokens:18,private_extra:'synthetic forbidden'},
+    id:'not forwarded',secret:'not forwarded'})})});
+  const res=response();await run(request(),res);
+  assert.deepEqual(res.body,{choices,usage:{prompt_tokens:11,completion_tokens:7,total_tokens:18},resolved_model:'gpt-4o-2024-08-06',finish_reason:'stop'});
+});
+test('legacy missing metadata and alias are null; invalid values do not leak', async () => {
+  for (const extra of [{},{model:'gpt-4o'},
+    {model:'synthetic-private-value',usage:{prompt_tokens:'1',completion_tokens:2,total_tokens:3}},
+    {usage:{prompt_tokens:-1,completion_tokens:2,total_tokens:1}},
+    {usage:{prompt_tokens:1,completion_tokens:2,total_tokens:9}},
+    {usage:{prompt_tokens:1,completion_tokens:2}},
+    {usage:{prompt_tokens:Number.MAX_SAFE_INTEGER+1,completion_tokens:0,total_tokens:Number.MAX_SAFE_INTEGER+1}}]) {
+    const choices=[{message:{content:'same'}}];
+    const run=handler({fetchImpl:async()=>({ok:true,json:async()=>({choices,...extra})})});
+    const res=response();await run(request(),res);
+    assert.deepEqual(res.body,{choices,usage:null,resolved_model:null,finish_reason:null});
+  }
+});
+test('upstream error keeps legacy contract without fabricated metering', async () => {
+  const run=handler({fetchImpl:async()=>({ok:false,status:429,json:async()=>({error:{code:'insufficient_quota'},usage:{prompt_tokens:1}})})});
+  const res=response();await run(request(),res);
+  assert.equal(res.code,429);assert.deepEqual(res.body,{error:{code:'insufficient_quota'}});
+});

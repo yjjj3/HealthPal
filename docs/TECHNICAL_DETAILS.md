@@ -116,3 +116,7 @@ firebase deploy --only functions:healthpal-ai --project YOUR_FIREBASE_PROJECT
 第二階段僅零費用準備（`f340275` 基準，已複核）：16 合成 PNG 的 image/source/expected contract 真值分層，逐張 QA 綁 hash；stdlib SQLite乾跑以20 total attempts、原子條件預留及虛擬限速驗證，無HTTP／credential路徑。token預檢未驗證、費用是外層提供假設，無live／部署／真機；[重現與限制](AI_DRY_RUN_PREPARATION.md)。
 
 本輪本機驗證：Python stdlib **14 項通過**、Flutter **272 項通過**（另1個離線評估driver無輸入跳過）、backend **8 項通過**，exit 0；分析 **0 error／10 warning／348 info**（exit 1，無新增）。dry fixture run 20 attempts／20 logical sample instances，虛擬限速與條件預留可核對；16圖重渲染hash全吻合。CI新增stdlib unittest命令，結果以對應提交的Actions紀錄核對；無production／scorer變更，未重跑iOS或正式服務。
+
+healthAI 計量窄修（2026-10-12，`34823cd` 基準，已複核）：choices向後相容，新增有界usage／resolved_model／finish_reason。已取得原revision／source generation、下載指定archive僅比較必要4檔與baseline完全相同；回退、NT1000 context成本envelope與App-session未接線blocker見 [窄修紀錄](HEALTHAI_METERING_REVIEW.md)。本輪未部署／模型live，費用批准不代表已驗證所有費用前提。
+
+本機驗證：backend 11／Python context與dry-run 18／Flutter全套272項通過（另1個離線driver無輸入跳過），exit 0；分析0 error／10 warning／348 info（exit 1，無新增）。未做iOS、App登入、deployment或模型live。
