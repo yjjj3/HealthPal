@@ -59,3 +59,5 @@ Build SUCCESS、38.103631秒、timeout1800s，machineType未明列（官方預�
 CLI因繼承DEBUG輸出verbose metadata；進度過濾曾誤帶公開Firebase配置與secret參照，未含secret原值。後續查核停用DEBUG，保留log已移除debug行；現有debug僅做secret-pattern有無boolean檢查，未印內容／輪替／刪除。false代表限定pattern未命中，不是全面無秘密保證；publication僅allowlist欄位，archive與debug不提交。
 
 **模型HTTP attempts仍0**，App-session接線／正常登入與成本gate未完成；本次沒有再部署、裝機或啟動benchmark。
+
+日誌boolean檢查補正：初次時間篩選漏掉logger level前綴，已重新限定部署時段。scopedDebugLinesPresent=true、signedUrlCredentialPattern=true；API secret／private key／OAuth／JWT／labelled token patterns=false。簽名URL為本機debug的短期存取憑證，未輸出原值／未提交debug內容；不輪替或刪除。false仍只代表限定pattern未命中。receipt修正採新文件commit，不amend或重寫歷史。

@@ -117,11 +117,11 @@
     "existingRetentionSeconds": "604800"
   },
   "debugChecks": {
+    "scopedDebugLinesPresent": true,
     "apiSecretPattern": false,
     "privateKeyPattern": false,
     "oauthTokenPattern": false,
-    "signedUrlCredentialPattern": false,
-    "scopedDebugLinesPresent": false,
+    "signedUrlCredentialPattern": true,
     "jwtPattern": false,
     "labelledTokenPattern": false
   },
@@ -132,7 +132,8 @@
     "allowlisted config/identity/secret reference/VPC/retention compared; IAM policy not independently dumped",
     "Debug file retained locally, no rotate/delete",
     "App session runner not yet connected",
-    "Old revision Ready succeeded; Active failed and ResourcesAvailable reconciling; actual rollback not exercised"
+    "Old revision Ready succeeded; Active failed and ResourcesAvailable reconciling; actual rollback not exercised",
+    "Corrected timestamp matching for logger level prefix: local scoped debug contains signed URL credential pattern; original values never published, no rotate/delete"
   ],
   "rollbackAfter": {
     "oldSourceGenerationAvailable": true,
