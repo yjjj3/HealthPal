@@ -174,3 +174,15 @@ HealthPal 是以 iOS 為目標的 Flutter／Firebase 健康管理專案，整合
 3. **讓結論符合證據**：資料不完整就揭露限制；編譯、模擬測試與真機執行分開記錄；尚在實作的項目不列為完成成果。
 
 這份紀錄呈現的是可追查的工程判斷、修正與驗證過程。後續仍需補上真機及跨裝置測試，才能進一步評估實際使用情境。
+
+## 9. 將 AI 辨識宣稱拆成可核對證據（已複核）
+
+2026-10-12，以 `af611d8` 為基準、已完成唯讀複核的本次驗證快照。16 個非真實處方／不得醫療使用的合成文字樣本，逐欄標記 unknown、名稱正規化白名單與人工確認要求；oracle／刻意錯誤輸出分離，均非模型結果。CLI 走 production AIClient／scan service／parser／model／mapper，分開計 raw 與正規化結果、逐字警語、缺列／多列／重複列及整張匹配。
+
+**確證修正**：schema 成功要求 `error:null`，原掃描畫面卻因鍵存在跳過藥品。實際 widget 流程與 fake transport 回歸先失敗，再窄修非 null 判斷，保留人工確認與錯誤拒絕。
+
+**限制揭露**：parser 不完全 enforce requested strict schema；英文名稱補入 name、整體 confidence 複製至各藥品且無拒絕閾值，不能當逐欄機率。實際假確認／儲存證明未知療程／數量會轉 0 後成功存入，本輪不改儲存語義；缺必要文字用法欄位仍拒絕。無模型／正式服務用量，沒有 live OCR 或臨床效用結果；外層今早已核對 `af611d8` 的 Xcode 覆蓋安裝／啟動成功並停登入頁；登入後／Face ID／HealthKit 未驗證，本輪新差異未裝機。
+
+原始結果、錯誤分類、代碼／prompt 契約來源與既有帳號／庫存／同步證據映射見 [AI 離線評估](AI_OFFLINE_EVALUATION.md)；[90 秒故事板](DEMO_STORYBOARD.md) 只交付規劃，未拍片。第二階段樣本、tokens／影像估算與總費用上限待另行核准；本輪未查價格、不編美元。
+
+**本輪驗證快照**：Flutter 269 全套／90 專項通過（另 1 項 CLI driver 無輸入跳過，已經兩次離線 CLI 執行）；backend 8、localhost rules 18 通過；分析 0 error／10 warning／348 info，exit 1、無新增。iOS arm64 device no-codesign／no-pub exit 0，App／Widget minimum 16、未簽署，既有 MLKit simulator 警示保留。oracle raw 整張 16/16、正規化 15/16；刻意錯誤 1/16。這些比例只校驗評分器，不是模型 accuracy；本輪未部署／裝機；GitHub CI 以對應提交的 Actions 紀錄核對。

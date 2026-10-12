@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "disclaimer",
+    "cases"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "disclaimer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "caseId",
+          "scenario",
+          "synthetic",
+          "sourceText",
+          "truth",
+          "unknownPaths",
+          "normalization",
+          "humanConfirmation"
+        ],
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "pattern": "^S[0-9]{2}$"
+          },
+          "scenario": {
+            "type": "string",
+            "minLength": 1
+          },
+          "synthetic": {
+            "const": true
+          },
+          "sourceText": {
+            "type": "string",
+            "minLength": 1
+          },
+          "truth": {
+            "$ref": "production-response-schema.json"
+          },
+          "unknownPaths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "normalization": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "trim",
+                  "casefold"
+                ]
+              }
+            }
+          },
+          "humanConfirmation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "required",
+              "reasons"
+            ],
+            "properties": {
+              "required": {
+                "const": true
+              },
+              "reasons": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

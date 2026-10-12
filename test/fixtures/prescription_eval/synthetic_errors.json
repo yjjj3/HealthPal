@@ -1,0 +1,69 @@
+{
+  "origin": "synthetic-errors-not-model",
+  "predictions": [
+    {
+      "caseId": "S01",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-01\", \"englishName\": \"SYNTH-01\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S02",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-02-B\", \"englishName\": \"SYNTH-02-B\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}, {\"name\": \"SYNTH-02\", \"englishName\": \"SYNTH-02\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S03",
+      "raw": "{\"medicines\": [{\"englishName\": \"SYNTH-03\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S04",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-04\", \"englishName\": \"SYNTH-04\", \"brandName\": null, \"appearance\": null, \"dosage\": \"999\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S05",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-05\", \"englishName\": \"SYNTH-05\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S06",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-06\", \"englishName\": \"SYNTH-06\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"未知格式\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S07",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-07\", \"englishName\": \"SYNTH-07\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": false, \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S08",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-08\", \"englishName\": \"SYNTH-08\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"捏造途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S09",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-09\", \"englishName\": \"SYNTH-09\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": -1, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S10",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-10\", \"englishName\": \"SYNTH-10\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": \"2\"}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S11",
+      "raw": "{invalid"
+    },
+    {
+      "caseId": "S12",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-12\", \"englishName\": \"SYNTH-12\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"SYNTH警語：不得醫療使用；保留全部標點！\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}, {\"name\": \"SYNTH-12\", \"englishName\": \"SYNTH-12\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"SYNTH警語：不得醫療使用；保留全部標點！\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S13",
+      "raw": "{\"medicines\": [], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S14",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-14\", \"englishName\": \"SYNTH-14\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 0.5, \"totalQuantity\": 0}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S15",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-15\", \"englishName\": \"SYNTH-15\", \"brandName\": null, \"appearance\": null, \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": \"2026-02-30\", \"followUpDate\": \"2026-10-14\"}, \"confidence\": 0.1, \"error\": null}"
+    },
+    {
+      "caseId": "S16",
+      "raw": "{\"medicines\": [{\"name\": \"SYNTH-16\", \"englishName\": \"SYNTH-16\", \"brandName\": null, \"appearance\": \"合成圖形A\", \"dosage\": \"1\", \"unit\": \"測試單位\", \"frequency\": \"每天1次\", \"timing\": \"飯後\", \"route\": \"測試途徑\", \"clinicalUse\": null, \"sideEffects\": null, \"precautions\": \"僅合成測試；不得醫療使用。\", \"storageMethod\": null, \"durationDays\": 2, \"totalQuantity\": 2}], \"hospitalInfo\": {\"hospitalName\": null, \"doctorName\": null, \"departmentName\": null, \"prescriptionDate\": null, \"followUpDate\": null}, \"confidence\": 0.1, \"error\": null}"
+    }
+  ]
+}

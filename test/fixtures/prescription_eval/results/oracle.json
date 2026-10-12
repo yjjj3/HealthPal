@@ -1,0 +1,5432 @@
+{
+  "version": 1,
+  "requestContract": {
+    "model": "gpt-4o",
+    "max_tokens": 4096,
+    "temperature": 0.1,
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "prescription_recognition",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "medicines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "englishName": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "brandName": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "appearance": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "dosage": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "unit": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "frequency": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "timing": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "route": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "clinicalUse": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "sideEffects": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "precautions": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "storageMethod": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "durationDays": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "totalQuantity": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "englishName",
+                  "brandName",
+                  "appearance",
+                  "dosage",
+                  "unit",
+                  "frequency",
+                  "timing",
+                  "route",
+                  "clinicalUse",
+                  "sideEffects",
+                  "precautions",
+                  "storageMethod",
+                  "durationDays",
+                  "totalQuantity"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "hospitalInfo": {
+              "type": "object",
+              "properties": {
+                "hospitalName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "doctorName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "departmentName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "prescriptionDate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "followUpDate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "hospitalName",
+                "doctorName",
+                "departmentName",
+                "prescriptionDate",
+                "followUpDate"
+              ],
+              "additionalProperties": false
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "medicines",
+            "hospitalInfo",
+            "confidence",
+            "error"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "fieldSummary": {
+    "raw": {
+      "counts": {
+        "correct": 350,
+        "incorrect": 0,
+        "missing": 0,
+        "hallucinated": 0
+      },
+      "expectedFieldDenominator": 350,
+      "knownDenominator": 169,
+      "unknownDenominator": 181,
+      "extraFieldPenalty": 0,
+      "perField": {
+        "medicine.name": {
+          "expected": 18,
+          "known": 17,
+          "unknown": 1,
+          "knownCorrect": 17,
+          "unknownCorrect": 1,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.englishName": {
+          "expected": 18,
+          "known": 18,
+          "unknown": 0,
+          "knownCorrect": 18,
+          "unknownCorrect": 0,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.brandName": {
+          "expected": 18,
+          "known": 0,
+          "unknown": 18,
+          "knownCorrect": 0,
+          "unknownCorrect": 18,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.appearance": {
+          "expected": 18,
+          "known": 2,
+          "unknown": 16,
+          "knownCorrect": 2,
+          "unknownCorrect": 16,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.dosage": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.unit": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.frequency": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.timing": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.route": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.clinicalUse": {
+          "expected": 18,
+          "known": 0,
+          "unknown": 18,
+          "knownCorrect": 0,
+          "unknownCorrect": 18,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.sideEffects": {
+          "expected": 18,
+          "known": 1,
+          "unknown": 17,
+          "knownCorrect": 1,
+          "unknownCorrect": 17,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.precautions": {
+          "expected": 18,
+          "known": 17,
+          "unknown": 1,
+          "knownCorrect": 17,
+          "unknownCorrect": 1,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.storageMethod": {
+          "expected": 18,
+          "known": 0,
+          "unknown": 18,
+          "knownCorrect": 0,
+          "unknownCorrect": 18,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.durationDays": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.totalQuantity": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.hospitalName": {
+          "expected": 16,
+          "known": 0,
+          "unknown": 16,
+          "knownCorrect": 0,
+          "unknownCorrect": 16,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.doctorName": {
+          "expected": 16,
+          "known": 0,
+          "unknown": 16,
+          "knownCorrect": 0,
+          "unknownCorrect": 16,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.departmentName": {
+          "expected": 16,
+          "known": 0,
+          "unknown": 16,
+          "knownCorrect": 0,
+          "unknownCorrect": 16,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.prescriptionDate": {
+          "expected": 16,
+          "known": 1,
+          "unknown": 15,
+          "knownCorrect": 1,
+          "unknownCorrect": 15,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.followUpDate": {
+          "expected": 16,
+          "known": 1,
+          "unknown": 15,
+          "knownCorrect": 1,
+          "unknownCorrect": 15,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        }
+      }
+    },
+    "postNormalization": {
+      "counts": {
+        "correct": 349,
+        "incorrect": 0,
+        "missing": 0,
+        "hallucinated": 1
+      },
+      "expectedFieldDenominator": 350,
+      "knownDenominator": 169,
+      "unknownDenominator": 181,
+      "extraFieldPenalty": 0,
+      "perField": {
+        "medicine.name": {
+          "expected": 18,
+          "known": 17,
+          "unknown": 1,
+          "knownCorrect": 17,
+          "unknownCorrect": 0,
+          "correct": 17,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 1
+        },
+        "medicine.englishName": {
+          "expected": 18,
+          "known": 18,
+          "unknown": 0,
+          "knownCorrect": 18,
+          "unknownCorrect": 0,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.brandName": {
+          "expected": 18,
+          "known": 0,
+          "unknown": 18,
+          "knownCorrect": 0,
+          "unknownCorrect": 18,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.appearance": {
+          "expected": 18,
+          "known": 2,
+          "unknown": 16,
+          "knownCorrect": 2,
+          "unknownCorrect": 16,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.dosage": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.unit": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.frequency": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.timing": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.route": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.clinicalUse": {
+          "expected": 18,
+          "known": 0,
+          "unknown": 18,
+          "knownCorrect": 0,
+          "unknownCorrect": 18,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.sideEffects": {
+          "expected": 18,
+          "known": 1,
+          "unknown": 17,
+          "knownCorrect": 1,
+          "unknownCorrect": 17,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.precautions": {
+          "expected": 18,
+          "known": 17,
+          "unknown": 1,
+          "knownCorrect": 17,
+          "unknownCorrect": 1,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.storageMethod": {
+          "expected": 18,
+          "known": 0,
+          "unknown": 18,
+          "knownCorrect": 0,
+          "unknownCorrect": 18,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.durationDays": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "medicine.totalQuantity": {
+          "expected": 18,
+          "known": 16,
+          "unknown": 2,
+          "knownCorrect": 16,
+          "unknownCorrect": 2,
+          "correct": 18,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.hospitalName": {
+          "expected": 16,
+          "known": 0,
+          "unknown": 16,
+          "knownCorrect": 0,
+          "unknownCorrect": 16,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.doctorName": {
+          "expected": 16,
+          "known": 0,
+          "unknown": 16,
+          "knownCorrect": 0,
+          "unknownCorrect": 16,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.departmentName": {
+          "expected": 16,
+          "known": 0,
+          "unknown": 16,
+          "knownCorrect": 0,
+          "unknownCorrect": 16,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.prescriptionDate": {
+          "expected": 16,
+          "known": 1,
+          "unknown": 15,
+          "knownCorrect": 1,
+          "unknownCorrect": 15,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "hospitalInfo.followUpDate": {
+          "expected": 16,
+          "known": 1,
+          "unknown": 15,
+          "knownCorrect": 1,
+          "unknownCorrect": 15,
+          "correct": 16,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        }
+      }
+    }
+  },
+  "origin": "synthetic-oracle-not-model",
+  "disclaimer": "Synthetic scorer/contract validation ONLY. No OCR, model, clinical or device accuracy measured.",
+  "casesDenominator": 16,
+  "missingCases": [],
+  "extraCases": [],
+  "completeCaseSet": true,
+  "jsonParseableCount": 16,
+  "jsonParseableRate": 1.0,
+  "schemaValidCount": 16,
+  "serviceAcceptedCount": 16,
+  "wholeExactRawCount": 16,
+  "wholeExactNormalizedCount": 15,
+  "reports": [
+    {
+      "caseId": "S01",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 10,
+        "unknownDenominator": 10,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 10,
+        "unknownDenominator": 10,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-01",
+          "englishName": "SYNTH-01",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.676261",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S02",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 35,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 35,
+        "knownDenominator": 20,
+        "unknownDenominator": 15,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 35,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 35,
+        "knownDenominator": 20,
+        "unknownDenominator": 15,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-02",
+          "englishName": "SYNTH-02",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.687187",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        },
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-02-B",
+          "englishName": "SYNTH-02-B",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.687192",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S03",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 19,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 1
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": false,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "hallucinated",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": false,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-03",
+          "englishName": "SYNTH-03",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.690070",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S04",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-04",
+          "englishName": "SYNTH-04",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.692392",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": false,
+      "mapperFailure": "FormatException",
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S05",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-05",
+          "englishName": "SYNTH-05",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.694641",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": false,
+      "mapperFailure": "FormatException",
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S06",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-06",
+          "englishName": "SYNTH-06",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.696643",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": false,
+      "mapperFailure": "FormatException",
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S07",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-07",
+          "englishName": "SYNTH-07",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.698858",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": false,
+      "mapperFailure": "FormatException",
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S08",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-08",
+          "englishName": "SYNTH-08",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "",
+          "startDate": "2026-10-12T13:56:25.701374",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": false,
+      "mapperFailure": "FormatException",
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S09",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-09",
+          "englishName": "SYNTH-09",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 0,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.703240",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S10",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 9,
+        "unknownDenominator": 11,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-10",
+          "englishName": "SYNTH-10",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 0,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.705076",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S11",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 2,
+        "unknownDenominator": 18,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 2,
+        "unknownDenominator": 18,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-11",
+          "englishName": "SYNTH-11",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "",
+          "unit": "",
+          "frequency": "",
+          "timing": "",
+          "durationDays": 0,
+          "totalQuantity": 0,
+          "route": "",
+          "startDate": "2026-10-12T13:56:25.707574",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": null,
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": false,
+      "mapperFailure": "FormatException",
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S12",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 10,
+        "unknownDenominator": 10,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 10,
+        "unknownDenominator": 10,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-12",
+          "englishName": "SYNTH-12",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.710878",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "SYNTH警語：不得醫療使用；保留全部標點！",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S13",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 11,
+        "unknownDenominator": 9,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 11,
+        "unknownDenominator": 9,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-13",
+          "englishName": "SYNTH-13",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.712841",
+          "clinicalUse": null,
+          "sideEffects": "合成測試Ａ；α／β。",
+          "precautions": "非真實處方\n不得醫療使用",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S14",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 10,
+        "unknownDenominator": 10,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 10,
+        "unknownDenominator": 10,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-14",
+          "englishName": "SYNTH-14",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 0,
+          "totalQuantity": 0,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.714767",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S15",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 12,
+        "unknownDenominator": 8,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": false
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 20,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 20,
+        "knownDenominator": 12,
+        "unknownDenominator": 8,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": false
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-15",
+          "englishName": "SYNTH-15",
+          "brandName": null,
+          "appearance": null,
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.716682",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    },
+    {
+      "caseId": "S16",
+      "synthetic": true,
+      "missingPrediction": false,
+      "jsonParseable": true,
+      "schemaIssues": [],
+      "serviceAccepted": true,
+      "serviceFailure": null,
+      "raw": {
+        "counts": {
+          "correct": 35,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 35,
+        "knownDenominator": 22,
+        "unknownDenominator": 13,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.appearance",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "postNormalization": {
+        "counts": {
+          "correct": 35,
+          "incorrect": 0,
+          "missing": 0,
+          "hallucinated": 0
+        },
+        "expectedFieldDenominator": 35,
+        "knownDenominator": 22,
+        "unknownDenominator": 13,
+        "extraFieldPenalty": 0,
+        "missingRows": 0,
+        "extraRows": 0,
+        "exactFields": true,
+        "details": [
+          {
+            "path": "medicines.0.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.appearance",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.0.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.0.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.name",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.englishName",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.brandName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.appearance",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.dosage",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.unit",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.frequency",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.timing",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.route",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.clinicalUse",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.sideEffects",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.precautions",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.storageMethod",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "medicines.1.durationDays",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "medicines.1.totalQuantity",
+            "category": "correct",
+            "truthUnknown": false
+          },
+          {
+            "path": "hospitalInfo.hospitalName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.doctorName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.departmentName",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.prescriptionDate",
+            "category": "correct",
+            "truthUnknown": true
+          },
+          {
+            "path": "hospitalInfo.followUpDate",
+            "category": "correct",
+            "truthUnknown": true
+          }
+        ]
+      },
+      "wholeExactRaw": true,
+      "wholeExactNormalized": true,
+      "modelConversion": [
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-16",
+          "englishName": "SYNTH-16",
+          "brandName": null,
+          "appearance": "合成圖形A",
+          "dosage": "1",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.718454",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        },
+        {
+          "id": null,
+          "drugCode": "",
+          "name": "SYNTH-16",
+          "englishName": "SYNTH-16",
+          "brandName": null,
+          "appearance": "合成圖形B",
+          "dosage": "2",
+          "unit": "測試單位",
+          "frequency": "每天1次",
+          "timing": "飯後",
+          "durationDays": 2,
+          "totalQuantity": 2,
+          "route": "測試途徑",
+          "startDate": "2026-10-12T13:56:25.718456",
+          "clinicalUse": null,
+          "sideEffects": null,
+          "precautions": "僅合成測試；不得醫療使用。",
+          "storageMethod": null,
+          "followUpDate": null,
+          "expiryDate": null,
+          "imageUrl": null,
+          "confidence": 0.1
+        }
+      ],
+      "mapperAccepted": true,
+      "mapperFailure": null,
+      "humanConfirmationRequired": true
+    }
+  ],
+  "provenance": {
+    "baseline": "af611d8f3cf8bee28fc8f150424633d3a96d84dd",
+    "command": [
+      "flutter",
+      "--no-version-check",
+      "test",
+      "--no-pub",
+      "test/prescription_eval_driver_test.dart"
+    ],
+    "liveRequests": 0,
+    "inputSha256": {
+      "golden": "8007d123066c4884644ea254223d7f97d14b1f5bbc061e34c6994ce190fbc93e",
+      "predictions": "ba8d0963b65584d595b9dbe7342bb183b78ec0519b0168984706e32e2e2602f3"
+    },
+    "sourceSha256": {
+      "lib/services/prescription_scan_service.dart": "566b4c9f6a119072c6a5db007f36a04a71d28fe27fa5df9e9e54267ad8cd0d63",
+      "lib/models/ai/prescription_recognition.dart": "c2b97f721ed125a6baf0a423fc17692b5ad987a6b04692b5f0818e5500b68795",
+      "lib/services/ai/ai_client.dart": "2002dcab4029f0d289185fd947203fa3dac0c434ecfca4eb1b232f056450e572",
+      "functions/gateway.js": "2495a98f3b32e8892454172a90df55d29ce2384a6e6a6a0228cbf51fa6855d0a"
+    }
+  }
+}

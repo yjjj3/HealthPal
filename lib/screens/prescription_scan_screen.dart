@@ -14,7 +14,12 @@ import 'qr_code_scanner_screen.dart';
 import 'prescription_confirm_screen.dart';
 
 class PrescriptionScanScreen extends StatefulWidget {
-  const PrescriptionScanScreen({super.key});
+  const PrescriptionScanScreen({super.key, this.service, this.currentUid,
+    this.accountChanges, this.initialImages = const []});
+  final PrescriptionScanService? service;
+  final String? Function()? currentUid;
+  final Stream<String?>? accountChanges;
+  final List<File> initialImages;
 
   @override
   State<PrescriptionScanScreen> createState() => _PrescriptionScanScreenState();
@@ -25,7 +30,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   final ImagePicker _picker = ImagePicker();
-  final PrescriptionScanService _scanService = PrescriptionScanService();
+  late final PrescriptionScanService _scanService;
 
   final List<File> _selectedImages = [];
   final List<String> _scannedDrugCodes = [];
@@ -39,8 +44,13 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
   @override
   void initState() {
     super.initState();
-    _session = AccountPageSession(() => FirebaseAuth.instance.currentUser?.uid,
-        FirebaseAuth.instance.authStateChanges().map((u) => u?.uid));
+    _scanService = widget.service ?? PrescriptionScanService();
+    _selectedImages.addAll(widget.initialImages);
+    _session = AccountPageSession(
+      widget.currentUid ?? (() => FirebaseAuth.instance.currentUser?.uid),
+      widget.accountChanges ?? (widget.currentUid != null
+        ? const Stream.empty()
+        : FirebaseAuth.instance.authStateChanges().map((u) => u?.uid)));
     _session.addListener(() {
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
@@ -169,7 +179,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
         );
         if (!mounted || !_active) return;
 
-        if (result.containsKey('error')) {
+        if (result['error'] != null) {
           debugPrint('辨識錯誤: ${result['error']}');
           continue;
         }
@@ -226,6 +236,9 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen>
           context,
           MaterialPageRoute(
             builder: (_) => PrescriptionConfirmScreen(
+              service: _scanService,
+              currentUid: widget.currentUid,
+              accountChanges: widget.accountChanges,
               medicines: allMedicines,
               hospitalInfo: hospitalInfo,
               imageFiles: _selectedImages,

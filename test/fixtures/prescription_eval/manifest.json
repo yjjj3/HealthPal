@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "images": [],
+  "ocrExecuted": false,
+  "generation": "deterministic JSON/text fixtures; signature-only bytes in mock transport, no OCR",
+  "sha256": {
+    "dataset.schema.json": "ceaa748a488d6bf26621e7a0cffafec02b16ae9f5bc1399263889f7e016ecd6e",
+    "golden.json": "8007d123066c4884644ea254223d7f97d14b1f5bbc061e34c6994ce190fbc93e",
+    "oracle.json": "ba8d0963b65584d595b9dbe7342bb183b78ec0519b0168984706e32e2e2602f3",
+    "production-response-schema.json": "1feaeff6378d375d3d8e4c6cf14377d606b287e946c35c7076d5637b91897607",
+    "synthetic_errors.json": "d971cf1b66c03f2e65c84ed61fa67fb3f62bca32d6b7a3d4f4c2a7f64bd31638"
+  }
+}

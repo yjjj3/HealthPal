@@ -1,0 +1,1094 @@
+{
+  "version": 1,
+  "disclaimer": "全部虛構、非真實處方、不得醫療使用；非OCR樣本",
+  "cases": [
+    {
+      "caseId": "S01",
+      "scenario": "完整單列",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n完整單列\n合成列 1\nname: SYNTH-01\nenglishName: SYNTH-01\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-01",
+            "englishName": "SYNTH-01",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S02",
+      "scenario": "多列不同名稱",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n多列不同名稱\n合成列 1\nname: SYNTH-02\nenglishName: SYNTH-02\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\n合成列 2\nname: SYNTH-02-B\nenglishName: SYNTH-02-B\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-02",
+            "englishName": "SYNTH-02",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          },
+          {
+            "name": "SYNTH-02-B",
+            "englishName": "SYNTH-02-B",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "medicines.1.brandName",
+        "medicines.1.appearance",
+        "medicines.1.clinicalUse",
+        "medicines.1.sideEffects",
+        "medicines.1.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S03",
+      "scenario": "英文名稱のみ",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n英文名稱のみ\n合成列 1\nname: [不可辨識]\nenglishName: SYNTH-03\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": null,
+            "englishName": "SYNTH-03",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.name",
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "英文名補入name不代表辨識到原name"
+        ]
+      }
+    },
+    {
+      "caseId": "S04",
+      "scenario": "未知劑量",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n未知劑量\n合成列 1\nname: SYNTH-04\nenglishName: SYNTH-04\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: [不可辨識]\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-04",
+            "englishName": "SYNTH-04",
+            "brandName": null,
+            "appearance": null,
+            "dosage": null,
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.dosage",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown dosage 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S05",
+      "scenario": "未知單位",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n未知單位\n合成列 1\nname: SYNTH-05\nenglishName: SYNTH-05\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: [不可辨識]\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-05",
+            "englishName": "SYNTH-05",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": null,
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.unit",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown unit 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S06",
+      "scenario": "未知頻率",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n未知頻率\n合成列 1\nname: SYNTH-06\nenglishName: SYNTH-06\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: [不可辨識]\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-06",
+            "englishName": "SYNTH-06",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": null,
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.frequency",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown frequency 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S07",
+      "scenario": "未知時機",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n未知時機\n合成列 1\nname: SYNTH-07\nenglishName: SYNTH-07\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: [不可辨識]\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-07",
+            "englishName": "SYNTH-07",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": null,
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.timing",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown timing 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S08",
+      "scenario": "未知途徑",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n未知途徑\n合成列 1\nname: SYNTH-08\nenglishName: SYNTH-08\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: [不可辨識]\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-08",
+            "englishName": "SYNTH-08",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": null,
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.route",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown route 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S09",
+      "scenario": "未知療程",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n未知療程\n合成列 1\nname: SYNTH-09\nenglishName: SYNTH-09\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: [不可辨識]\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-09",
+            "englishName": "SYNTH-09",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": null,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "medicines.0.durationDays",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown durationDays 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S10",
+      "scenario": "未知數量",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n未知數量\n合成列 1\nname: SYNTH-10\nenglishName: SYNTH-10\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: [不可辨識]\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-10",
+            "englishName": "SYNTH-10",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": null
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "medicines.0.totalQuantity",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown totalQuantity 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S11",
+      "scenario": "模糊合成文字",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n模糊合成文字\n合成列 1\nname: SYNTH-11\nenglishName: SYNTH-11\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: [不可辨識]\nunit: [不可辨識]\nfrequency: [不可辨識]\ntiming: [不可辨識]\nroute: [不可辨識]\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: [不可辨識]\nstorageMethod: [不可辨識]\ndurationDays: [不可辨識]\ntotalQuantity: [不可辨識]\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-11",
+            "englishName": "SYNTH-11",
+            "brandName": null,
+            "appearance": null,
+            "dosage": null,
+            "unit": null,
+            "frequency": null,
+            "timing": null,
+            "route": null,
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": null,
+            "storageMethod": null,
+            "durationDays": null,
+            "totalQuantity": null
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.dosage",
+        "medicines.0.unit",
+        "medicines.0.frequency",
+        "medicines.0.timing",
+        "medicines.0.route",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.precautions",
+        "medicines.0.storageMethod",
+        "medicines.0.durationDays",
+        "medicines.0.totalQuantity",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "模糊內容不可猜測"
+        ]
+      }
+    },
+    {
+      "caseId": "S12",
+      "scenario": "逐字警語",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n逐字警語\n合成列 1\nname: SYNTH-12\nenglishName: SYNTH-12\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: SYNTH警語：不得醫療使用；保留全部標點！\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-12",
+            "englishName": "SYNTH-12",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "SYNTH警語：不得醫療使用；保留全部標點！",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S13",
+      "scenario": "Unicode警語",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\nUnicode警語\n合成列 1\nname: SYNTH-13\nenglishName: SYNTH-13\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: 合成測試Ａ；α／β。\nprecautions: 非真實處方\n不得醫療使用\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-13",
+            "englishName": "SYNTH-13",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": "合成測試Ａ；α／β。",
+            "precautions": "非真實處方\n不得醫療使用",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.clinicalUse",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S14",
+      "scenario": "明確零與未知不同",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n明確零與未知不同\n合成列 1\nname: SYNTH-14\nenglishName: SYNTH-14\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 0\ntotalQuantity: 0\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-14",
+            "englishName": "SYNTH-14",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 0,
+            "totalQuantity": 0
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S15",
+      "scenario": "合成日期",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n合成日期\n合成列 1\nname: SYNTH-15\nenglishName: SYNTH-15\nbrandName: [不可辨識]\nappearance: [不可辨識]\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: 2026-10-12\nfollowUpDate: 2026-10-14",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-15",
+            "englishName": "SYNTH-15",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": "2026-10-12",
+          "followUpDate": "2026-10-14"
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.appearance",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S16",
+      "scenario": "多列同名不同外觀",
+      "synthetic": true,
+      "sourceText": "非真實處方／不得醫療使用；SYNTH 識別無真藥對應。\n多列同名不同外觀\n合成列 1\nname: SYNTH-16\nenglishName: SYNTH-16\nbrandName: [不可辨識]\nappearance: 合成圖形A\ndosage: 1\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\n合成列 2\nname: SYNTH-16\nenglishName: SYNTH-16\nbrandName: [不可辨識]\nappearance: 合成圖形B\ndosage: 2\nunit: 測試單位\nfrequency: 每天1次\ntiming: 飯後\nroute: 測試途徑\nclinicalUse: [不可辨識]\nsideEffects: [不可辨識]\nprecautions: 僅合成測試；不得醫療使用。\nstorageMethod: [不可辨識]\ndurationDays: 2\ntotalQuantity: 2\nhospitalName: [不可辨識]\ndoctorName: [不可辨識]\ndepartmentName: [不可辨識]\nprescriptionDate: [不可辨識]\nfollowUpDate: [不可辨識]",
+      "truth": {
+        "medicines": [
+          {
+            "name": "SYNTH-16",
+            "englishName": "SYNTH-16",
+            "brandName": null,
+            "appearance": "合成圖形A",
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          },
+          {
+            "name": "SYNTH-16",
+            "englishName": "SYNTH-16",
+            "brandName": null,
+            "appearance": "合成圖形B",
+            "dosage": "2",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        },
+        "confidence": 0.1,
+        "error": null
+      },
+      "unknownPaths": [
+        "medicines.0.brandName",
+        "medicines.0.clinicalUse",
+        "medicines.0.sideEffects",
+        "medicines.0.storageMethod",
+        "medicines.1.brandName",
+        "medicines.1.clinicalUse",
+        "medicines.1.sideEffects",
+        "medicines.1.storageMethod",
+        "hospitalInfo.hospitalName",
+        "hospitalInfo.doctorName",
+        "hospitalInfo.departmentName",
+        "hospitalInfo.prescriptionDate",
+        "hospitalInfo.followUpDate"
+      ],
+      "normalization": {
+        "name": [
+          "trim",
+          "casefold"
+        ],
+        "englishName": [
+          "trim",
+          "casefold"
+        ]
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    }
+  ]
+}

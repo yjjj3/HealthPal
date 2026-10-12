@@ -44,3 +44,26 @@ test('missing secret and network failures have explicit failure states',async()=
   res=response();await handler({fetchImpl:async()=>{throw new Error('network secret');}})(request(),res);assert.equal(res.code,503);
   assert.ok(!JSON.stringify(res.body).includes('network secret'));
 });
+
+test('offline prescription schema request matches gateway envelope, not content accuracy', async () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const fixture = (name) => JSON.parse(fs.readFileSync(path.join(__dirname, '../..', 'test/fixtures/prescription_eval', name), 'utf8'));
+  const body = {
+    model: 'gpt-4o', max_tokens: 4096, temperature: 0.1,
+    messages: [{role: 'user', content: [
+      {type: 'text', text: 'Synthetic contract only; no medical use'},
+      {type: 'image_url', image_url: {url: 'data:image/png;base64,iVBORw0KGgo=', detail: 'high'}},
+    ]}],
+    response_format: {type: 'json_schema', json_schema: {name: 'prescription_recognition', strict: true, schema: fixture('production-response-schema.json')}},
+  };
+  assert.equal(validatePayload(body), body);
+  const raw = fixture('oracle.json').predictions[0].raw;
+  const run = handler({fetchImpl: async (_url, options) => {
+    assert.deepEqual(JSON.parse(options.body), body);
+    return {ok: true, json: async () => ({choices: [{message: {content: raw}}]})};
+  }});
+  const res = response(); await run(request(body), res);
+  assert.equal(res.code, 200);
+  assert.equal(res.body.choices[0].message.content, raw);
+});

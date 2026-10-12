@@ -1,0 +1,180 @@
+{
+  "type": "object",
+  "properties": {
+    "medicines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "englishName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "brandName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "appearance": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dosage": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "frequency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timing": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "route": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "clinicalUse": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sideEffects": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "precautions": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "storageMethod": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "durationDays": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "totalQuantity": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "englishName",
+          "brandName",
+          "appearance",
+          "dosage",
+          "unit",
+          "frequency",
+          "timing",
+          "route",
+          "clinicalUse",
+          "sideEffects",
+          "precautions",
+          "storageMethod",
+          "durationDays",
+          "totalQuantity"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "hospitalInfo": {
+      "type": "object",
+      "properties": {
+        "hospitalName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "doctorName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "departmentName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prescriptionDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "followUpDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "hospitalName",
+        "doctorName",
+        "departmentName",
+        "prescriptionDate",
+        "followUpDate"
+      ],
+      "additionalProperties": false
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "medicines",
+    "hospitalInfo",
+    "confidence",
+    "error"
+  ],
+  "additionalProperties": false
+}

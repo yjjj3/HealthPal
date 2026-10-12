@@ -58,3 +58,5 @@ npm run test:rules
 上述 npm ci 依 package-lock.json 安裝依賴。規則測試另需已安裝的 Firebase CLI 與 Java 21 以上、相容的 Firestore emulator；缺少 emulator 時 CLI 可能下載，執行前確認環境。測試指定 demo-healthpal-priority1，只使用本機模擬器；Flutter 測試使用假資料。GitHub 的 Ubuntu CI 執行 Flutter 分析／測試、backend 與 Firestore rules 驗證，不產生 APK、不驗證 iOS 原生建置。
 
 真機待驗：通知權限與容量、App 關閉後跨日／跨週提醒、省電及時區變化、跨裝置離線同步、HealthKit、登入與 Widget 更新。請使用測試帳號與虛構資料。
+
+AI 驗證：[免費離線評估與限制](docs/AI_OFFLINE_EVALUATION.md)／[90 秒 Demo 故事板（未拍攝）](docs/DEMO_STORYBOARD.md)。
