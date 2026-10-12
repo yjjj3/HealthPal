@@ -1,0 +1,2768 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "ocrExecuted": false,
+  "liveExecuted": false,
+  "sourceGoldenSha256": "8007d123066c4884644ea254223d7f97d14b1f5bbc061e34c6994ce190fbc93e",
+  "generatorSha256": "9f856d3232b48e9ec09b5b995c0eaa6e1511aa520318b921506123c1e3198d47",
+  "parameters": {
+    "width": 1024,
+    "height": 1536,
+    "format": "PNG",
+    "compressLevel": 9,
+    "fontIndex": 0,
+    "fontSizes": [
+      18,
+      20,
+      22,
+      24,
+      30,
+      40
+    ],
+    "fontFile": "STHeiti Medium.ttc",
+    "fontSha256": "f8fa4a63e2cf500e98e64d4c73260daaba049306cf85dec9e3729bc285b7d645",
+    "pillowVersion": "11.1.0",
+    "pythonVersion": "3.11.4"
+  },
+  "hardRepeats": [
+    "S03",
+    "S11",
+    "S12",
+    "S16"
+  ],
+  "candidateLogicalSamples": 20,
+  "attemptLimit": 20,
+  "cases": [
+    {
+      "caseId": "S01",
+      "image": "S01.png",
+      "sha256": "1ba17a1ffdb129ba2844bc9dc42d3c330a4bef56465396d692d7630d195ca2ec",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 113101,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-01",
+            "englishName": "SYNTH-01",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-01",
+              "englishName": "SYNTH-01",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-01"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-01"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S02",
+      "image": "S02.png",
+      "sha256": "cfaa641111db4a2dd76ea16b7a13ad78ada6a468a2cfda3541057211d5495d7e",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 116649,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-02",
+            "englishName": "SYNTH-02",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          },
+          {
+            "name": "SYNTH-02-B",
+            "englishName": "SYNTH-02-B",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-02",
+              "englishName": "SYNTH-02",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            },
+            {
+              "name": "SYNTH-02-B",
+              "englishName": "SYNTH-02-B",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-02"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-02"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.1.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-02-B"
+        },
+        "medicines.1.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-02-B"
+        },
+        "medicines.1.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.1.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.1.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.1.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.1.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.1.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.1.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.1.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.1.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.1.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.1.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.1.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.1.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S03",
+      "image": "S03.png",
+      "sha256": "287e49fb479dd00e35cfc4eb0dcf2a229bb59f85fb1c044269497041599329e3",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 113241,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": null,
+            "englishName": "SYNTH-03",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-03",
+              "englishName": "SYNTH-03",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-03"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {
+        "medicines.0.name": {
+          "kind": "english_name_fallback",
+          "from": "medicines.0.englishName",
+          "expected": "SYNTH-03"
+        }
+      },
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "英文名補入name不代表辨識到原name"
+        ]
+      }
+    },
+    {
+      "caseId": "S04",
+      "image": "S04.png",
+      "sha256": "cfe36e09a8da93e4497792f0734fe551f725fcda5f7df3a4424a7048d4ce8bf6",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 113722,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-04",
+            "englishName": "SYNTH-04",
+            "brandName": null,
+            "appearance": null,
+            "dosage": null,
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-04",
+              "englishName": "SYNTH-04",
+              "brandName": null,
+              "appearance": null,
+              "dosage": null,
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-04"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-04"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown dosage 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S05",
+      "image": "S05.png",
+      "sha256": "31fd9a7b41c47561a39430528c2f6464b93499f715f22dc36a7176b3cc00bcdf",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 111483,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-05",
+            "englishName": "SYNTH-05",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": null,
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-05",
+              "englishName": "SYNTH-05",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": null,
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-05"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-05"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown unit 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S06",
+      "image": "S06.png",
+      "sha256": "132bf4e696d35545950823cbca4136a859adb79f88918c94338651137a32e0c4",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 112560,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-06",
+            "englishName": "SYNTH-06",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": null,
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-06",
+              "englishName": "SYNTH-06",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": null,
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-06"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-06"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown frequency 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S07",
+      "image": "S07.png",
+      "sha256": "17a7cfcecb93acb2ce9fa7c3e19968aa88decc1f6ddbd45ab906e90dc132367c",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 112298,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-07",
+            "englishName": "SYNTH-07",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": null,
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-07",
+              "englishName": "SYNTH-07",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": null,
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-07"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-07"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown timing 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S08",
+      "image": "S08.png",
+      "sha256": "9fd16348a926d51458be2a82331b998a1aa41e84035f8177ba39ceea45af6aec",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 111584,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-08",
+            "englishName": "SYNTH-08",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": null,
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-08",
+              "englishName": "SYNTH-08",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": null,
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-08"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-08"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown route 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S09",
+      "image": "S09.png",
+      "sha256": "c1a0d93b373d5b1af0934b1fc625c040512aae14b614574db477431e5d93daa3",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 113791,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-09",
+            "englishName": "SYNTH-09",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": null,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-09",
+              "englishName": "SYNTH-09",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": null,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-09"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-09"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown durationDays 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S10",
+      "image": "S10.png",
+      "sha256": "de4177d9f2455d1864f3fd14f314840b20a9f5a107c10c346fff5b1d0df6a784",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 112846,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-10",
+            "englishName": "SYNTH-10",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": null
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-10",
+              "englishName": "SYNTH-10",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": null
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-10"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-10"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "unknown totalQuantity 必須人工處理"
+        ]
+      }
+    },
+    {
+      "caseId": "S11",
+      "image": "S11.png",
+      "sha256": "eb81ac4ff9c98c0fa30c8e2c8de38f2927ce3d545ad1463f225657cd722a5100",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 96824,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-11",
+            "englishName": "SYNTH-11",
+            "brandName": null,
+            "appearance": null,
+            "dosage": null,
+            "unit": null,
+            "frequency": null,
+            "timing": null,
+            "route": null,
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": null,
+            "storageMethod": null,
+            "durationDays": null,
+            "totalQuantity": null
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-11",
+              "englishName": "SYNTH-11",
+              "brandName": null,
+              "appearance": null,
+              "dosage": null,
+              "unit": null,
+              "frequency": null,
+              "timing": null,
+              "route": null,
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": null,
+              "storageMethod": null,
+              "durationDays": null,
+              "totalQuantity": null
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-11"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-11"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "geometric_occlusion",
+          "sourceValue": null
+        },
+        "medicines.0.unit": {
+          "state": "geometric_occlusion",
+          "sourceValue": null
+        },
+        "medicines.0.frequency": {
+          "state": "geometric_occlusion",
+          "sourceValue": null
+        },
+        "medicines.0.timing": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.route": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.totalQuantity": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用",
+          "模糊內容不可猜測"
+        ]
+      }
+    },
+    {
+      "caseId": "S12",
+      "image": "S12.png",
+      "sha256": "bcaf20c6dd16c47c06eda76567e12e30aba4afb02799594ffdafb05f0155d2bc",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 115600,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-12",
+            "englishName": "SYNTH-12",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "SYNTH警語：不得醫療使用；保留全部標點！",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-12",
+              "englishName": "SYNTH-12",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "SYNTH警語：不得醫療使用；保留全部標點！",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-12"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-12"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "SYNTH警語：不得醫療使用；保留全部標點！"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S13",
+      "image": "S13.png",
+      "sha256": "b2a5cde18b0bef70220b976ca26248f2fdc588ab3833e416d7d79b5996149f12",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 117483,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-13",
+            "englishName": "SYNTH-13",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": "合成測試Ａ；α／β。",
+            "precautions": "非真實處方\n不得醫療使用",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-13",
+              "englishName": "SYNTH-13",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": "合成測試Ａ；α／β。",
+              "precautions": "非真實處方\n不得醫療使用",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-13"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-13"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "visible",
+          "sourceValue": "合成測試Ａ；α／β。"
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "非真實處方\n不得醫療使用"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S14",
+      "image": "S14.png",
+      "sha256": "39688988bb7c8e6f12c795cb473f3a505209f2907be3c3a8dad563a5f579cb72",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 114774,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-14",
+            "englishName": "SYNTH-14",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 0,
+            "totalQuantity": 0
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-14",
+              "englishName": "SYNTH-14",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 0,
+              "totalQuantity": 0
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-14"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-14"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 0
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 0
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S15",
+      "image": "S15.png",
+      "sha256": "4427f84e38a9660bed13e1fc67deafb7e9f55699ad8b1b81d6f3b28350fdee33",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 114076,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-15",
+            "englishName": "SYNTH-15",
+            "brandName": null,
+            "appearance": null,
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": "2026-10-12",
+          "followUpDate": "2026-10-14"
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-15",
+              "englishName": "SYNTH-15",
+              "brandName": null,
+              "appearance": null,
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": "2026-10-12",
+            "followUpDate": "2026-10-14"
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-15"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-15"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "visible",
+          "sourceValue": "2026-10-12"
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "visible",
+          "sourceValue": "2026-10-14"
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    },
+    {
+      "caseId": "S16",
+      "image": "S16.png",
+      "sha256": "5a5f7568394df86a02f568a9b4c8c5321a223a9c682a7a2e4e306bd7d3a05a15",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 118872,
+      "sourceImageTruth": {
+        "medicines": [
+          {
+            "name": "SYNTH-16",
+            "englishName": "SYNTH-16",
+            "brandName": null,
+            "appearance": "合成圖形A",
+            "dosage": "1",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          },
+          {
+            "name": "SYNTH-16",
+            "englishName": "SYNTH-16",
+            "brandName": null,
+            "appearance": "合成圖形B",
+            "dosage": "2",
+            "unit": "測試單位",
+            "frequency": "每天1次",
+            "timing": "飯後",
+            "route": "測試途徑",
+            "clinicalUse": null,
+            "sideEffects": null,
+            "precautions": "僅合成測試；不得醫療使用。",
+            "storageMethod": null,
+            "durationDays": 2,
+            "totalQuantity": 2
+          }
+        ],
+        "hospitalInfo": {
+          "hospitalName": null,
+          "doctorName": null,
+          "departmentName": null,
+          "prescriptionDate": null,
+          "followUpDate": null
+        }
+      },
+      "expectedOutputContract": {
+        "fieldTruth": {
+          "medicines": [
+            {
+              "name": "SYNTH-16",
+              "englishName": "SYNTH-16",
+              "brandName": null,
+              "appearance": "合成圖形A",
+              "dosage": "1",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            },
+            {
+              "name": "SYNTH-16",
+              "englishName": "SYNTH-16",
+              "brandName": null,
+              "appearance": "合成圖形B",
+              "dosage": "2",
+              "unit": "測試單位",
+              "frequency": "每天1次",
+              "timing": "飯後",
+              "route": "測試途徑",
+              "clinicalUse": null,
+              "sideEffects": null,
+              "precautions": "僅合成測試；不得醫療使用。",
+              "storageMethod": null,
+              "durationDays": 2,
+              "totalQuantity": 2
+            }
+          ],
+          "hospitalInfo": {
+            "hospitalName": null,
+            "doctorName": null,
+            "departmentName": null,
+            "prescriptionDate": null,
+            "followUpDate": null
+          }
+        },
+        "successError": null,
+        "confidence": "self_reported_0_to_1_not_scored",
+        "schemaSource": "../prescription_eval/production-response-schema.json"
+      },
+      "visibility": {
+        "medicines.0.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-16"
+        },
+        "medicines.0.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-16"
+        },
+        "medicines.0.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.appearance": {
+          "state": "visible",
+          "sourceValue": "合成圖形A"
+        },
+        "medicines.0.dosage": {
+          "state": "visible",
+          "sourceValue": "1"
+        },
+        "medicines.0.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.0.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.0.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.0.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.0.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.0.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.0.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.0.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.1.name": {
+          "state": "visible",
+          "sourceValue": "SYNTH-16"
+        },
+        "medicines.1.englishName": {
+          "state": "visible",
+          "sourceValue": "SYNTH-16"
+        },
+        "medicines.1.brandName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.1.appearance": {
+          "state": "visible",
+          "sourceValue": "合成圖形B"
+        },
+        "medicines.1.dosage": {
+          "state": "visible",
+          "sourceValue": "2"
+        },
+        "medicines.1.unit": {
+          "state": "visible",
+          "sourceValue": "測試單位"
+        },
+        "medicines.1.frequency": {
+          "state": "visible",
+          "sourceValue": "每天1次"
+        },
+        "medicines.1.timing": {
+          "state": "visible",
+          "sourceValue": "飯後"
+        },
+        "medicines.1.route": {
+          "state": "visible",
+          "sourceValue": "測試途徑"
+        },
+        "medicines.1.clinicalUse": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.1.sideEffects": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.1.precautions": {
+          "state": "visible",
+          "sourceValue": "僅合成測試；不得醫療使用。"
+        },
+        "medicines.1.storageMethod": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "medicines.1.durationDays": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "medicines.1.totalQuantity": {
+          "state": "visible",
+          "sourceValue": 2
+        },
+        "hospitalInfo.hospitalName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.doctorName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.departmentName": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.prescriptionDate": {
+          "state": "blank",
+          "sourceValue": null
+        },
+        "hospitalInfo.followUpDate": {
+          "state": "blank",
+          "sourceValue": null
+        }
+      },
+      "transformations": {},
+      "humanConfirmation": {
+        "required": true,
+        "reasons": [
+          "核對全部欄位，未經人工確認不得採用"
+        ]
+      }
+    }
+  ]
+}

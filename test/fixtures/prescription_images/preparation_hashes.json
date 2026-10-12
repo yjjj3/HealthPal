@@ -1,0 +1,16 @@
+{
+  "baseline": "f34027565f03dc56d5b03f07feb5b91766ee2d1c",
+  "liveAuthorized": false,
+  "sha256": {
+    "tool/ai_dry_run/generate_images.py": "9f856d3232b48e9ec09b5b995c0eaa6e1511aa520318b921506123c1e3198d47",
+    "tool/ai_dry_run/runner.py": "ded105eb5a8e790756fd5f1831528065db242afc5c3b28f5d5d7025232edb50c",
+    "tool/ai_dry_run/test_runner.py": "0f391a9c8ba2cbf29cb38510282a2702ccabd499ac0c42532d9a1abc34deb6ec",
+    "tool/ai_dry_run/token_precheck.py": "00e172ec1da18bc91e2d71d5ae1fc155a031b87deb34ed84ee17a1677237f08f",
+    "test/fixtures/prescription_images/dry_run_fixtures.json": "2a7cafdecf38f63886e7febc0f7ed5368da23f7e75f0b74db5f031c35764cd27",
+    "test/fixtures/prescription_images/dry_run_result.json": "f629863c81cba4d7642164e8270b0754d640c62fd1dc8b8ee0c6b40982ffe24d",
+    "test/fixtures/prescription_images/manifest.json": "05d8e9e39ba18087fe302586a18191833a2313f1bd1b20b0d6a2fc9193ef2675",
+    "test/fixtures/prescription_images/reproducibility.json": "d784db987f17478b6f60443ff1eb51cbe8064d54969bbadc0bf8bcca7a067d8f",
+    "test/fixtures/prescription_images/token_precheck.json": "8f9b701029dc4b42b68a137d200b9cab95adf7e3a1e00526b624be03ea9f9995",
+    "test/fixtures/prescription_images/visual_qa.json": "479b2eae68cac9756e79d5801910fc11a5bde6a290679cbe9a39e929fcb9b0c1"
+  }
+}

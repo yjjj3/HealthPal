@@ -1,0 +1,177 @@
+{
+  "status": "unverified",
+  "installedTokenizerModules": {
+    "tiktoken": false,
+    "tokenizers": false
+  },
+  "encodingExecuted": false,
+  "cacheDownloaded": false,
+  "reason": "No verified local GPT-4o tokenizer/cache execution; character/byte inventories are not token counts.",
+  "modelAlias": "gpt-4o",
+  "nonImageTokenAssumption": 10000,
+  "assumptionVerified": false,
+  "promptSha256": "7a636ad9a2eb605fbbd15edb4eb70b91fede2597aed19d874c389ccbb58e0a52",
+  "schemaSha256": "1feaeff6378d375d3d8e4c6cf14377d606b287e946c35c7076d5637b91897607",
+  "inputInventory": [
+    {
+      "caseId": "S01",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 113101,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S02",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 116649,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S03",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 113241,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S04",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 113722,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S05",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 111483,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S06",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 112560,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S07",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 112298,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S08",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 111584,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S09",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 113791,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S10",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 112846,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S11",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 96824,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S12",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 115600,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S13",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 117483,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S14",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 114774,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S15",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 114076,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    },
+    {
+      "caseId": "S16",
+      "promptUtf8Bytes": 3104,
+      "schemaUtf8Bytes": 3455,
+      "imageBytes": 118872,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
+      "inputTokensMeasured": null,
+      "outputTokensMeasured": null
+    }
+  ]
+}

@@ -112,3 +112,7 @@ firebase deploy --only functions:healthpal-ai --project YOUR_FIREBASE_PROJECT
 離線精確性窄修（2026-10-12，`988c886` 基準，已複核）：schema integer 接受數值整數 double，保留 Dart 大整數直接判定；name fallback 使用 name 規則。結果排除 model conversion 的 operational startDate，原 production model 不改；只驗證評分摘要與非時間轉換穩定，不保證 byte-identical。golden 未擴增，已知品牌／用途／儲存、院所／醫師／科別、name-only 及多樣頻率 coverage 缺口列於 [評估文件](AI_OFFLINE_EVALUATION.md)。
 
 窄修最終本機驗證：Flutter **272 全套／93 專項通過**，另 1 個 CLI driver 無輸入時跳過、兩組 CLI 已另行執行；分析 **0 error／10 warning／348 info**（exit 1、無新增）。兩組 oracle／刻意錯誤整張匹配維持 raw 16/16 與 1/16，正規化 15/16 與 1/16；350 欄位分母不變。只改離線 tool／test／docs／結果，未重跑 backend、rules 或 iOS；前輪結果為歷史證據。本輪未裝機／部署／呼叫模型；GitHub CI 以對應提交的 Actions 紀錄核對。
+
+第二階段僅零費用準備（`f340275` 基準，已複核）：16 合成 PNG 的 image/source/expected contract 真值分層，逐張 QA 綁 hash；stdlib SQLite乾跑以20 total attempts、原子條件預留及虛擬限速驗證，無HTTP／credential路徑。token預檢未驗證、費用是外層提供假設，無live／部署／真機；[重現與限制](AI_DRY_RUN_PREPARATION.md)。
+
+本輪本機驗證：Python stdlib **14 項通過**、Flutter **272 項通過**（另1個離線評估driver無輸入跳過）、backend **8 項通過**，exit 0；分析 **0 error／10 warning／348 info**（exit 1，無新增）。dry fixture run 20 attempts／20 logical sample instances，虛擬限速與條件預留可核對；16圖重渲染hash全吻合。CI新增stdlib unittest命令，結果以對應提交的Actions紀錄核對；無production／scorer變更，未重跑iOS或正式服務。

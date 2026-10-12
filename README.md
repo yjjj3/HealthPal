@@ -60,3 +60,5 @@ npm run test:rules
 真機待驗：通知權限與容量、App 關閉後跨日／跨週提醒、省電及時區變化、跨裝置離線同步、HealthKit、登入與 Widget 更新。請使用測試帳號與虛構資料。
 
 AI 驗證：[免費離線評估與限制](docs/AI_OFFLINE_EVALUATION.md)／[90 秒 Demo 故事板（未拍攝）](docs/DEMO_STORYBOARD.md)。
+
+[第二階段零費用圖片／乾跑準備（未 live）](docs/AI_DRY_RUN_PREPARATION.md)。

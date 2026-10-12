@@ -1,0 +1,25 @@
+{
+  "sameEnvironment": true,
+  "pillowVersion": "11.1.0",
+  "fontSha256": "f8fa4a63e2cf500e98e64d4c73260daaba049306cf85dec9e3729bc285b7d645",
+  "generatorSha256": "9f856d3232b48e9ec09b5b995c0eaa6e1511aa520318b921506123c1e3198d47",
+  "imageHashMatches": {
+    "S01": true,
+    "S02": true,
+    "S03": true,
+    "S04": true,
+    "S05": true,
+    "S06": true,
+    "S07": true,
+    "S08": true,
+    "S09": true,
+    "S10": true,
+    "S11": true,
+    "S12": true,
+    "S13": true,
+    "S14": true,
+    "S15": true,
+    "S16": true
+  },
+  "claim": "16 image hashes identical in this pinned local environment; no cross-platform byte-identical guarantee"
+}

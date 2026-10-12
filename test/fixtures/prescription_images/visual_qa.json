@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-12",
+  "observer": "outer read-only review reported in user message",
+  "method": "view_image individual S01-S16, not contact-sheet-only",
+  "criteria": [
+    "visible warning banner",
+    "readable labels and warnings",
+    "no clipping/overlap",
+    "S03 name genuinely blank",
+    "S11 geometric occlusion, not optical blur",
+    "S02/S16 two rows clear",
+    "S13 Unicode/newline readable",
+    "S14 zero and S15 dates visible"
+  ],
+  "imageSha256": {
+    "S01": "1ba17a1ffdb129ba2844bc9dc42d3c330a4bef56465396d692d7630d195ca2ec",
+    "S02": "cfaa641111db4a2dd76ea16b7a13ad78ada6a468a2cfda3541057211d5495d7e",
+    "S03": "287e49fb479dd00e35cfc4eb0dcf2a229bb59f85fb1c044269497041599329e3",
+    "S04": "cfe36e09a8da93e4497792f0734fe551f725fcda5f7df3a4424a7048d4ce8bf6",
+    "S05": "31fd9a7b41c47561a39430528c2f6464b93499f715f22dc36a7176b3cc00bcdf",
+    "S06": "132bf4e696d35545950823cbca4136a859adb79f88918c94338651137a32e0c4",
+    "S07": "17a7cfcecb93acb2ce9fa7c3e19968aa88decc1f6ddbd45ab906e90dc132367c",
+    "S08": "9fd16348a926d51458be2a82331b998a1aa41e84035f8177ba39ceea45af6aec",
+    "S09": "c1a0d93b373d5b1af0934b1fc625c040512aae14b614574db477431e5d93daa3",
+    "S10": "de4177d9f2455d1864f3fd14f314840b20a9f5a107c10c346fff5b1d0df6a784",
+    "S11": "eb81ac4ff9c98c0fa30c8e2c8de38f2927ce3d545ad1463f225657cd722a5100",
+    "S12": "bcaf20c6dd16c47c06eda76567e12e30aba4afb02799594ffdafb05f0155d2bc",
+    "S13": "b2a5cde18b0bef70220b976ca26248f2fdc588ab3833e416d7d79b5996149f12",
+    "S14": "39688988bb7c8e6f12c795cb473f3a505209f2907be3c3a8dad563a5f579cb72",
+    "S15": "4427f84e38a9660bed13e1fc67deafb7e9f55699ad8b1b81d6f3b28350fdee33",
+    "S16": "5a5f7568394df86a02f568a9b4c8c5321a223a9c682a7a2e4e306bd7d3a05a15"
+  },
+  "ocrExecuted": false,
+  "additionalObserver": "Codex individual view_image S01-S16, all 16 examined"
+}

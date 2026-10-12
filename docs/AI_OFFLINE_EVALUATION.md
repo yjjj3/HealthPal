@@ -86,7 +86,9 @@ golden 不增例，仍 16 case／18 藥品列。已知值覆蓋如下；0 表示
 
 今早外層已核對 `af611d8`，以既有 Xcode Run 在同台 iPhone 覆蓋安裝；觀察到 Successfully installed／Successfully launched Runner，最後停登入頁。這是該提交的已觀察安裝／啟動證據，不是本輪自動實測。登入後、Face ID、通知、HealthKit、跨日／離線跨裝置仍未真機驗證；本輪新差異未裝機。iOS no-codesign 編譯不等於真機啟動。
 
-## 第二階段（待費用與操作核准，不執行）
+## 第二階段（live 費用與操作未批准）
+
+零費用圖片／乾跑準備見 [獨立準備紀錄](AI_DRY_RUN_PREPARATION.md)。最新限制為 **20 total attempts**（retry／timeout／warmup 均計入），候選16＋4不保證全部完成；取代下列早期20 logical／40 HTTP attempts預案，沒有live授權。
 
 建議固定這 16 例各 1 次，加選定 4 例重跑，共 20 次 logical calls（邏輯請求）；先補可讀合成影像與 manifest，再用授權的真模型測試，另保留未參與 prompt 調整的樣本，不能僅用這個小集合宣稱泛化。現行程式仍為 gpt-4o alias；若需 pin snapshot，須先審閱 gateway 允許名單變更，不能假稱已固定版本。
 

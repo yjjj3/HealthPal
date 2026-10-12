@@ -190,3 +190,9 @@ HealthPal 是以 iOS 為目標的 Flutter／Firebase 健康管理專案，整合
 **離線精確性補充（`988c886` 後，已複核）**：僅修工具／測試，數值整數型別含大整數、name fallback 白名單及轉換時間欄分離先有失敗回歸。相同輸入的評分摘要／非時間 conversion 穩定，非 byte-identical 保證；production 不變。16 例不增加，以 coverage 表明列已知內容與 name-only／多樣 regimen 缺口，不以 parser 綠燈補足模型證據。
 
 窄修最終本機驗證：Flutter **272 全套／93 專項通過**，另 1 個 CLI driver 無輸入時跳過、兩組 CLI 已另行執行；分析 **0 error／10 warning／348 info**（exit 1、無新增）。兩組 oracle／刻意錯誤整張匹配維持 raw 16/16 與 1/16，正規化 15/16 與 1/16；350 欄位分母不變。只改離線 tool／test／docs／結果，未重跑 backend、rules 或 iOS；前輪結果為歷史證據。本輪未裝機／部署／呼叫模型；GitHub CI 以對應提交的 Actions 紀錄核對。
+
+## 10. 零費用圖像與執行邊界準備（已複核）
+
+2026-10-12，`f340275` 基準。沿原16例建立分離image benchmark，醒目合成／不得醫療使用標誌；逐欄可見性與契約補值分開，English-only正常補名不當AI錯誤。16圖逐張像素QA、同字體/Pillow本機重渲染hash全吻合；S11為幾何遮蔽，沒有真blur/OCR。乾跑工具沒有network/credential入口，以持久原子預留、20 total attempts、虛擬clock、停後不續跑及缺usage=null做回歸。token未實測、費用未批准、無模型/正式服務用量；[素材、命令及未完成清單](AI_DRY_RUN_PREPARATION.md)。
+
+本輪本機驗證：Python stdlib **14 項通過**、Flutter **272 項通過**（另1個離線評估driver無輸入跳過）、backend **8 項通過**，exit 0；分析 **0 error／10 warning／348 info**（exit 1，無新增）。dry fixture run 20 attempts／20 logical sample instances，虛擬限速與條件預留可核對；16圖重渲染hash全吻合。CI新增stdlib unittest命令，結果以對應提交的Actions紀錄核對；無production／scorer變更，未重跑iOS或正式服務。
