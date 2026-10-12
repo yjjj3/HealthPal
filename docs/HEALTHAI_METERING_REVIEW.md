@@ -38,13 +38,9 @@
 
 [context dry result](healthai_metering/context_dry_result.json) 只模擬20 attempts，逐次SQLite持久原子reserve $0.36096、失败不退，沿用停止／不resume／虛擬限速；[cost envelope](healthai_metering/cost_envelope.json) 明示 liveReady=false、actualCost=null。原14項dryrun保留，加4項context budget回歸。舊10000/image token假設的歷史結果不改寫。
 
-## Live runner 尚未完成
+## App-session 接線
 
-目前 Python context dry工具沒有network／credential，**不是正常App-session live runner**。尚無App內 benchmark入口與durable預留接線，登入也未確認；本輪不以桌面admin auth冒充Firebase用戶token。原AIClient會explicit429 retry一次，不能直接把一次complete算一attempt；後續須單次transport每HTTP送前原子reserve、無隱性retry，UID／同UID世代與停止／timeout結果隔離，token只在App既有session記憶體內用于請求header，不落檔／不log／不新建持續存取。
-
-token_precheck仍未驗證，本機沒有tokenizer／cached encoding、不安裝下載；模型成本方案改以context上界支撐，這不證明實測input tokens。正常登入、App接線、部署後additive契約及成本gate未完成前絕不呼叫模型；不讓此獨立blocker擴大healthAI計量窄修。
-
-本機驗證：backend 11／Python context與dry-run 18／Flutter全套272項通過（另1個離線driver無輸入跳過），exit 0；分析0 error／10 warning／348 info（exit 1，無新增）。未做iOS、App登入、deployment或模型live。
+後續以 `c05f472` 為基準完成 debug-only App-session runner、固定素材／durable journal／單次 transport 接線及 fake 驗證，見 [入口、成本前提及限制](APP_SESSION_BENCHMARK.md)。正常登入／live 成本條件／真機仍未核實，模型 attempts 0。原 AIClient retry 不被 benchmark 重用；不匯出 token。部署 receipt 以下保持歷史證據，不代表已 live。
 
 ## 部署 receipt（2026-10-12）
 
@@ -58,6 +54,6 @@ Build SUCCESS、38.103631秒、timeout1800s，machineType未明列（官方預�
 
 CLI因繼承DEBUG輸出verbose metadata；進度過濾曾誤帶公開Firebase配置與secret參照，未含secret原值。後續查核停用DEBUG，保留log已移除debug行；現有debug僅做secret-pattern有無boolean檢查，未印內容／輪替／刪除。false代表限定pattern未命中，不是全面無秘密保證；publication僅allowlist欄位，archive與debug不提交。
 
-**模型HTTP attempts仍0**，App-session接線／正常登入與成本gate未完成；本次沒有再部署、裝機或啟動benchmark。
+**模型HTTP attempts仍0**，App-session接線已完成本機fake驗證，正常登入與live成本gate仍待核實；本次沒有再部署、裝機或啟動benchmark。
 
 日誌boolean檢查補正：初次時間篩選漏掉logger level前綴，已重新限定部署時段。scopedDebugLinesPresent=true、signedUrlCredentialPattern=true；API secret／private key／OAuth／JWT／labelled token patterns=false。簽名URL為本機debug的短期存取憑證，未輸出原值／未提交debug內容；不輪替或刪除。false仍只代表限定pattern未命中。receipt修正採新文件commit，不amend或重寫歷史。

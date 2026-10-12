@@ -56,6 +56,9 @@ class PrescriptionScanService {
   final DateTime Function() _now;
 
   // 台灣處方箋專用 Prompt
+  /// Exact production contract for the debug-only synthetic benchmark.
+  static String get benchmarkPrompt => _prescriptionPrompt;
+
   static const String _prescriptionPrompt = '''
 你是一位專業的台灣醫療處方箋 OCR 辨識系統。請仔細分析這張圖片（可能是處方箋、藥袋、成藥包裝或藥品說明），並提取以下資訊。
 

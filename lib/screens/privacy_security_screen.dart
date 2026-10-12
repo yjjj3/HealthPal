@@ -1,3 +1,5 @@
+import '../services/ai/benchmark/runtime.dart';
+import 'ai_benchmark_screen.dart';
 import '../theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'change_password_screen.dart';
@@ -191,6 +193,10 @@ class _PrivacySecurityScreenState extends State<PrivacySecurityScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            if (benchmarkEnabled)
+              ListTile(title: const Text('合成處方 benchmark（debug）'),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const AIBenchmarkScreen()))),
             // --- 區塊 1: 登入安全 ---
             _buildSectionTitle('登入安全'),
 
