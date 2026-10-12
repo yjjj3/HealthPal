@@ -1,0 +1,166 @@
+{
+  "commitSha": "dd00240106cf755799b69360744a74e679d15507",
+  "ciUrl": "https://github.com/yjjj3/HealthPal/actions/runs/38217883722",
+  "ciSuccess": true,
+  "ciPythonTests": 18,
+  "ciBackendTests": 11,
+  "deployment": {
+    "command": [
+      "/opt/homebrew/bin/firebase",
+      "deploy",
+      "--only",
+      "functions:healthpal-ai:healthAI",
+      "--project",
+      "health-management-f046a",
+      "--non-interactive"
+    ],
+    "localStartUtc": "2026-10-12T07:32:37.915958+00:00",
+    "cloudReserveTwd": 200,
+    "modelHttpAttempts": 0,
+    "localFinishUtc": "2026-10-12T07:33:56.668534+00:00",
+    "exitCode": 0,
+    "errors": [],
+    "warnings": [
+      "Compute Engine service-account lookup returned403/API disabled; CLI used existing default-name fallback; no API enabled by this task",
+      "Inherited DEBUG emitted verbose metadata; retained log sanitized, subsequent queries disable DEBUG"
+    ]
+  },
+  "after": {
+    "state": "ACTIVE",
+    "revision": "healthai-00002-xuh",
+    "updateTime": "2026-10-12T07:33:53.579925467Z",
+    "sourceGeneration": "1791790380489128",
+    "sourceFingerprint": "772787d634c41a7198ebc881ba538888e2fdb898",
+    "runtime": "nodejs22",
+    "traffic": [
+      {
+        "revisionName": "healthai-00002-xuh",
+        "percent": 100,
+        "latestRevision": true
+      }
+    ],
+    "config": {
+      "timeoutSeconds": 60,
+      "availableMemory": "256Mi",
+      "availableCpu": "1",
+      "maxInstanceCount": 2,
+      "maxInstanceRequestConcurrency": 10
+    },
+    "securityUnchanged": true,
+    "retentionUnchanged": true,
+    "configUnchanged": true,
+    "build": {
+      "status": "SUCCESS",
+      "startTime": "2026-10-12T07:33:02.477910299Z",
+      "finishTime": "2026-10-12T07:33:40.581541Z",
+      "timeout": "1800s",
+      "machineType": null
+    },
+    "artifact": {
+      "images": [
+        {
+          "imageSizeBytes": "18861465",
+          "uploadTime": "2026-10-12T07:33:29.450463Z",
+          "updateTime": "2026-10-12T07:33:29.748911Z",
+          "tags": [
+            "latest",
+            "version_1"
+          ]
+        },
+        {
+          "imageSizeBytes": "18858220",
+          "uploadTime": "2026-10-10T16:51:32.922591Z",
+          "updateTime": "2026-10-12T07:33:29.748911Z"
+        },
+        {
+          "imageSizeBytes": "104730807",
+          "uploadTime": "2026-10-12T07:33:38.901279Z",
+          "updateTime": "2026-10-12T07:33:38.901279Z",
+          "tags": [
+            "latest"
+          ]
+        }
+      ],
+      "hasNextPage": false
+    }
+  },
+  "newCloudSourceComparison": {
+    "index.js": {
+      "matchesCommit": true,
+      "sha256": "7dd11c9293e33cc57f4860d46843614a156d8218d3ef886d1d0a6d947d48b629"
+    },
+    "gateway.js": {
+      "matchesCommit": true,
+      "sha256": "2c12a4bf1263adf91b4335477ea668f30f55afa1ab4f84a84161dc1d3d1ccff4"
+    },
+    "package.json": {
+      "matchesCommit": true,
+      "sha256": "ed2827cb1ebe2bc6bed4d8ac2a91f8d88d839de643bf0d9a55af35726a53d4f3"
+    },
+    "package-lock.json": {
+      "matchesCommit": true,
+      "sha256": "6721ce655c071a5d7bbd0f11131b539f4bbab56dc1d334bdd65c77c0ce02f5ce"
+    }
+  },
+  "buildDurationSeconds": 38.103631,
+  "deploymentFeeEstimate": {
+    "billingVerified": false,
+    "roundedBuildMinutes": 1,
+    "defaultMachineAssumption": "e2-standard-2 (field omitted)",
+    "usdAt006PerMinute": 0.006,
+    "twdAtReserve40Times1point2": 0.28800000000000003,
+    "artifactInventoryBytes": 142450492,
+    "artifactStorage30DayUsdEstimateAt010PerGiBMonth": 0.013266735896468164,
+    "artifactStorage30DayTwdAtReserve48": 0.6368033230304718,
+    "cloudReserveTwd": 200,
+    "actualCharges": null,
+    "existingRetentionSeconds": "604800"
+  },
+  "debugChecks": {
+    "apiSecretPattern": false,
+    "privateKeyPattern": false,
+    "oauthTokenPattern": false,
+    "signedUrlCredentialPattern": false,
+    "scopedDebugLinesPresent": false,
+    "jwtPattern": false,
+    "labelledTokenPattern": false
+  },
+  "modelHttpAttemptsByThisTask": 0,
+  "limitations": [
+    "No model probe",
+    "Billing/FX/tax actual charges not observed",
+    "allowlisted config/identity/secret reference/VPC/retention compared; IAM policy not independently dumped",
+    "Debug file retained locally, no rotate/delete",
+    "App session runner not yet connected",
+    "Old revision Ready succeeded; Active failed and ResourcesAvailable reconciling; actual rollback not exercised"
+  ],
+  "rollbackAfter": {
+    "oldSourceGenerationAvailable": true,
+    "oldRevisionAvailable": true,
+    "retentionDays": [
+      "604800s"
+    ],
+    "oldRevisionConditions": [
+      {
+        "type": "Ready",
+        "state": "CONDITION_SUCCEEDED"
+      },
+      {
+        "type": "Active",
+        "state": "CONDITION_FAILED"
+      },
+      {
+        "type": "ResourcesAvailable",
+        "state": "CONDITION_RECONCILING"
+      },
+      {
+        "type": "ContainerReady",
+        "state": "CONDITION_SUCCEEDED"
+      },
+      {
+        "type": "ContainerHealthy",
+        "state": "CONDITION_SUCCEEDED"
+      }
+    ]
+  }
+}

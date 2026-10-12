@@ -1,6 +1,6 @@
-# healthAI 計量窄修（已複核，尚未部署）
+# healthAI 計量窄修（已複核，已部署計量窄修）
 
-2026-10-12，基準 `34823cd`。使用者批准本次 NT$1000 總 cap（部署／OpenAI／雲端／服務費／稅／FX），取代早期 NT$100 計畫；最多 20 actual HTTP attempts，失敗／retry／warmup 都計入。healthAI 部署窄修已獲授權，但執行仍等本機複核、commit／CI 與使用者通知；本輪沒有部署或模型請求。其他 functions、rules、安全設定與憑證不改。
+2026-10-12，基準 `34823cd`。使用者批准本次 NT$1000 總 cap（部署／OpenAI／雲端／服務費／稅／FX），取代早期 NT$100 計畫；最多 20 actual HTTP attempts，失敗／retry／warmup 都計入。healthAI 部署窄修已獲授權，但執行仍等本機複核、commit／CI 與使用者通知；部署前本機階段沒有部署或模型請求；後續部署紀錄如下，模型請求仍為0。其他 functions、rules、安全設定與憑證不改。
 
 ## Source 與可回復證據
 
@@ -45,3 +45,17 @@
 token_precheck仍未驗證，本機沒有tokenizer／cached encoding、不安裝下載；模型成本方案改以context上界支撐，這不證明實測input tokens。正常登入、App接線、部署後additive契約及成本gate未完成前絕不呼叫模型；不讓此獨立blocker擴大healthAI計量窄修。
 
 本機驗證：backend 11／Python context與dry-run 18／Flutter全套272項通過（另1個離線driver無輸入跳過），exit 0；分析0 error／10 warning／348 info（exit 1，無新增）。未做iOS、App登入、deployment或模型live。
+
+## 部署 receipt（2026-10-12）
+
+[allowlist receipt](healthai_metering/deployment_receipt.json)：程式 dd00240106cf755799b69360744a74e679d15507、[CI completed/success](https://github.com/yjjj3/HealthPal/actions/runs/38217883722)，含18 Python／11 backend。正常僅部署healthAI，exit0；本機開始／完成UTC與Cloud updateTime分列，不混同伺服器精確開始時間。
+
+新revision **healthai-00002-xuh**、ACTIVE／100%traffic，source generation **1791790380489128**；新cloud必要4檔与程式commit逐byte吻合。runtime/config、ingress／identity／secret binding參照／VPC及retention指紋未變，未讀secret值；IAM policy未獨立dump，不據此宣稱所有權限全面審計。Compute Engine service-account lookup遇API disabled403，CLI用既有預設名稱fallback，沒有啟用Compute API／加權限；identity fingerprint前後相同。
+
+Build SUCCESS、38.103631秒、timeout1800s，machineType未明列（官方預設e2-standard-2），非實際帳單核對。以無free tier優惠、向上1分鐘算 **$0.006／NT0.288**（FX40×1.2 reserve門檻）。相關artifact metadata合計142450492 bytes，包含cache／舊image，沒有把全部歸為純新增；以全量重算0.10 USD/GiB-month，30天約 **$0.01327／NT0.637**。image bytes不是storage完整帳單，網路／請求／quota／startup等仍由NT200 cloud reserve涵蓋並需後續核對。已有cleanup **7天**，未改政策／刪artifact，不把30天估算當修改retention。
+
+原source generation仍可讀，原revision仍存在且Ready成功；Active失敗／ResourcesAvailable reconciling也保留於receipt，未試流量回退或模型probe。回退目標精確，但未宣稱實測回退成功。
+
+CLI因繼承DEBUG輸出verbose metadata；進度過濾曾誤帶公開Firebase配置與secret參照，未含secret原值。後續查核停用DEBUG，保留log已移除debug行；現有debug僅做secret-pattern有無boolean檢查，未印內容／輪替／刪除。false代表限定pattern未命中，不是全面無秘密保證；publication僅allowlist欄位，archive與debug不提交。
+
+**模型HTTP attempts仍0**，App-session接線／正常登入與成本gate未完成；本次沒有再部署、裝機或啟動benchmark。
